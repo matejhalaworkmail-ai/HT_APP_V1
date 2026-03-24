@@ -1,0 +1,172 @@
+{% extends 'base.html' %}
+
+{% block title %}{% if id %}Upravit materiál{% else %}Přidat materiál{% endif %} — TZ Databáze{% endblock %}
+
+{% block breadcrumb %}
+    <a href="{{ url_for('materials') }}">Materiály</a>
+    <span>/ {% if id %}Upravit{% else %}Přidat nový{% endif %}</span>
+{% endblock %}
+
+{% block content %}
+<div class="form-wrap">
+    <div class="page-title">{% if id %}Upravit materiál{% else %}Přidat nový materiál{% endif %}</div>
+
+    <form method="post" enctype="multipart/form-data"
+          action="{% if id %}{{ url_for('material_form', id=id) }}{% else %}{{ url_for('material_form') }}{% endif %}">
+
+        <!-- ── Základní informace ─────────────────────────── -->
+        <div class="form-section">
+            <div class="form-section-title">Základní informace</div>
+            <div class="form-grid-3">
+                <label class="label col-span-3">
+                    Název materiálu *
+                    <input type="text" name="name" required
+                           value="{{ material.name if material else '' }}"
+                           placeholder="např. 16MnCr5, 42CrMo4…">
+                </label>
+                <label class="label">
+                    Norma
+                    <input type="text" name="norm"
+                           value="{{ material.norm if material else '' }}"
+                           placeholder="EN, DIN, ČSN…">
+                </label>
+                <label class="label">
+                    Typ
+                    <select name="type">
+                        <option value="">— vyberte typ —</option>
+                        {% for t in ['Cementační ocel', 'Zušlechťovací ocel', 'Nitridační ocel',
+                                     'Nástrojová ocel', 'Rychlořezná ocel', 'Ložisková ocel',
+                                     'Nerezová ocel', 'Litina', 'Jiné'] %}
+                        <option value="{{ t }}" {% if material and material.type == t %}selected{% endif %}>{{ t }}</option>
+                        {% endfor %}
+                    </select>
+                </label>
+                <label class="label">
+                    Poznámka
+                    <input type="text" name="Note"
+                           value="{{ material.Note if material else '' }}"
+                           placeholder="Volitelná poznámka">
+                </label>
+            </div>
+        </div>
+
+        <!-- ── Chemické složení ───────────────────────────── -->
+        <div class="form-section">
+            <div class="form-section-title">Chemické složení (hm. %)</div>
+            <div style="display:grid; grid-template-columns: 80px 1fr 1fr; gap:8px 14px; align-items:center; margin-bottom:4px;">
+                <div style="font-size:10px; color:var(--text3); text-transform:uppercase; letter-spacing:1px;">Prvek</div>
+                <div style="font-size:10px; color:var(--text3); text-transform:uppercase; letter-spacing:1px;">Min</div>
+                <div style="font-size:10px; color:var(--text3); text-transform:uppercase; letter-spacing:1px;">Max</div>
+            </div>
+            {% for el in [('C','Uhlík'), ('Si','Křemík'), ('Mn','Mangan'), ('P','Fosfor'),
+                          ('S','Síra'), ('Cr','Chróm'), ('Ni','Nikl'), ('Mo','Molybden'),
+                          ('V','Vanadium'), ('Pb','Olovo')] %}
+            <div style="display:grid; grid-template-columns: 80px 1fr 1fr; gap:8px 14px; align-items:center; margin-bottom:6px;">
+                <div style="font-size:13px; font-weight:600; color:var(--text);">{{ el[0] }} <span style="font-size:11px; font-weight:400; color:var(--text3);">{{ el[1] }}</span></div>
+                <input type="number" step="0.001" name="{{ el[0] }}_min"
+                       value="{{ material[el[0]~'_min'] if material and material[el[0]~'_min'] is not none else '' }}"
+                       placeholder="0.000">
+                <input type="number" step="0.001" name="{{ el[0] }}_max"
+                       value="{{ material[el[0]~'_max'] if material and material[el[0]~'_max'] is not none else '' }}"
+                       placeholder="0.000">
+            </div>
+            {% endfor %}
+        </div>
+
+        <!-- ── Tepelné zpracování ─────────────────────────── -->
+        <div class="form-section">
+            <div class="form-section-title">Doporučené tepelné zpracování</div>
+            <div class="form-grid">
+                <label class="label">
+                    Kalení (olej) min (°C)
+                    <input type="number" name="Hardening_Temp_Oil_min"
+                           value="{{ material.Hardening_Temp_Oil_min if material and material.Hardening_Temp_Oil_min else '' }}"
+                           placeholder="820">
+                </label>
+                <label class="label">
+                    Kalení (olej) max (°C)
+                    <input type="number" name="Hardening_Temp_Oil_max"
+                           value="{{ material.Hardening_Temp_Oil_max if material and material.Hardening_Temp_Oil_max else '' }}"
+                           placeholder="860">
+                </label>
+                <label class="label">
+                    Kalení (voda) min (°C)
+                    <input type="number" name="Hardening_Temp_Water_min"
+                           value="{{ material.Hardening_Temp_Water_min if material and material.Hardening_Temp_Water_min else '' }}"
+                           placeholder="">
+                </label>
+                <label class="label">
+                    Kalení (voda) max (°C)
+                    <input type="number" name="Hardening_Temp_Water_max"
+                           value="{{ material.Hardening_Temp_Water_max if material and material.Hardening_Temp_Water_max else '' }}"
+                           placeholder="">
+                </label>
+                <label class="label">
+                    Popouštění min (°C)
+                    <input type="number" name="Tempering_Temp_min"
+                           value="{{ material.Tempering_Temp_min if material and material.Tempering_Temp_min else '' }}"
+                           placeholder="150">
+                </label>
+                <label class="label">
+                    Popouštění max (°C)
+                    <input type="number" name="Tempering_Temp_max"
+                           value="{{ material.Tempering_Temp_max if material and material.Tempering_Temp_max else '' }}"
+                           placeholder="200">
+                </label>
+            </div>
+        </div>
+
+        <!-- ── Tvrdost po kalení ──────────────────────────── -->
+        <div class="form-section">
+            <div class="form-section-title">Tvrdost po kalení</div>
+            <div class="form-grid-3">
+                <label class="label">
+                    Tvrdost min
+                    <input type="number" name="Hardness_min"
+                           value="{{ material.Hardness_min if material and material.Hardness_min else '' }}"
+                           placeholder="58">
+                </label>
+                <label class="label">
+                    Tvrdost max
+                    <input type="number" name="Hardness_max"
+                           value="{{ material.Hardness_max if material and material.Hardness_max else '' }}"
+                           placeholder="64">
+                </label>
+                <label class="label">
+                    Jednotka
+                    <select name="Hardness_Unit">
+                        {% for u in ['HRC','HV','HB','HRA'] %}
+                        <option value="{{ u }}" {% if material and material.Hardness_Unit == u %}selected{% elif not material and u == 'HRC' %}selected{% endif %}>{{ u }}</option>
+                        {% endfor %}
+                    </select>
+                </label>
+            </div>
+        </div>
+
+        <!-- ── Materiálový list ───────────────────────────── -->
+        <div class="form-section">
+            <div class="form-section-title">Materiálový list (PDF)</div>
+            <label class="label">
+                Nahrát PDF
+                <input type="file" name="pdf_file" accept=".pdf">
+            </label>
+            {% if material and material.pdf_path %}
+            <div style="margin-top:10px; font-size:13px;">
+                Aktuální soubor:
+                <a class="file-link" href="{{ url_for('uploaded_file', filename=material.pdf_path) }}" target="_blank">
+                    📄 {{ material.pdf_path.split('/')[-1] }}
+                </a>
+                <span style="color:var(--text3); font-size:12px; margin-left:8px;">(nahrátím nového souboru nahradíte stávající)</span>
+            </div>
+            {% endif %}
+        </div>
+
+        <div class="form-actions">
+            <a href="{{ url_for('materials') }}" class="btn btn-ghost">Zrušit</a>
+            <button type="submit" class="btn btn-primary">
+                {% if id %}💾 Uložit změny{% else %}+ Přidat materiál{% endif %}
+            </button>
+        </div>
+    </form>
+</div>
+{% endblock %}

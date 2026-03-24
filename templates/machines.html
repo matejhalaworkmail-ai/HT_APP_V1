@@ -1,0 +1,101 @@
+{% extends 'base.html' %}
+
+{% block title %}Zařízení — TZ Databáze{% endblock %}
+
+{% block breadcrumb %}
+    TZ Databáze <span>/ Zařízení</span>
+{% endblock %}
+
+{% block topbar_actions %}
+    <a href="{{ url_for('machine_form') }}" class="btn btn-primary">+ Přidat zařízení</a>
+{% endblock %}
+
+{% block content %}
+<div class="stats">
+    <div class="stat stat-y">
+        <div class="stat-label">Celkem zařízení</div>
+        <div class="stat-val">{{ machines|length }}</div>
+        <div class="stat-sub">v databázi</div>
+    </div>
+    <div class="stat stat-g">
+        <div class="stat-label">Aktivní</div>
+        <div class="stat-val">{{ machines | selectattr('aktivni', 'equalto', 1) | list | length }}</div>
+        <div class="stat-sub">zařízení</div>
+    </div>
+</div>
+
+<div class="table-panel">
+    <div class="panel-header">
+        <div>
+            <span class="panel-title">Seznam zařízení</span>
+            <span class="panel-count">{{ machines|length }} záznamů</span>
+        </div>
+        <a href="{{ url_for('machine_form') }}" class="btn btn-primary btn-sm">+ Přidat</a>
+    </div>
+
+    {% if machines %}
+    <table class="tab">
+        <thead>
+            <tr>
+                <th>Název</th>
+                <th>Typ</th>
+                <th>Technologie</th>
+                <th>Max. teplota</th>
+                <th>Max. vsázka</th>
+                <th>Stav</th>
+                <th>Použito v dílech</th>
+                <th>Manuál</th>
+                <th></th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for m in machines %}
+            <tr>
+                <td class="td-name">{{ m.name }}</td>
+                <td class="td-sub">{{ m.type or '—' }}</td>
+                <td>{% if m.technology %}<span class="chip chip-orange">{{ m.technology }}</span>{% else %}—{% endif %}</td>
+                <td class="td-orange">{{ (m.Temperature_max ~ ' °C') if m.Temperature_max else '—' }}</td>
+                <td class="td-sub">{{ (m.Max_Load ~ ' kg') if m.Max_Load else '—' }}</td>
+                <td>
+                    {% if m.aktivni %}
+                        <span class="chip chip-green">Aktivní</span>
+                    {% else %}
+                        <span class="chip chip-gray">Neaktivní</span>
+                    {% endif %}
+                </td>
+                <td>
+                    {% set cnt = quantity.get(m.id, 0) %}
+                    {% if cnt > 0 %}
+                        <span class="chip chip-blue">{{ cnt }} dílů</span>
+                    {% else %}
+                        <span style="color:var(--text3); font-size:12px;">0</span>
+                    {% endif %}
+                </td>
+                <td>
+                    {% if m.manual_path %}
+                        <a class="file-link" href="{{ url_for('uploaded_file', filename=m.manual_path) }}" target="_blank">📄 PDF</a>
+                    {% else %}—{% endif %}
+                </td>
+                <td>
+                    <div class="td-actions">
+                        <a href="{{ url_for('machine_form', id=m.id) }}" class="btn btn-ghost btn-sm">Upravit</a>
+                        <form method="post" action="{{ url_for('delete_machine', id=m.id) }}"
+                              onsubmit="return confirm('Smazat zařízení {{ m.name }}?')">
+                            <button class="btn btn-danger btn-sm" type="submit">Smazat</button>
+                        </form>
+                    </div>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% else %}
+    <div class="empty">
+        <div class="empty-icon">🏭</div>
+        <div class="empty-text">Zatím nejsou přidána žádná zařízení</div>
+        <br>
+        <a href="{{ url_for('machine_form') }}" class="btn btn-primary">Přidat první zařízení</a>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

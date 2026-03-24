@@ -1,0 +1,181 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ part.name_part }} — TZ Databáze{% endblock %}
+
+{% block breadcrumb %}
+    <a href="{{ url_for('Parts') }}">Díly</a> <span>/ {{ part.name_part }}</span>
+{% endblock %}
+
+{% block topbar_actions %}
+    <a href="{{ url_for('parts_form', id=part.id) }}" class="btn btn-ghost">Upravit</a>
+    <form method="post" action="{{ url_for('delete_part', id=part.id) }}"
+          onsubmit="return confirm('Opravdu smazat díl {{ part.name_part }}?')">
+        <button class="btn btn-danger" type="submit">Smazat</button>
+    </form>
+{% endblock %}
+
+{% block content %}
+<div style="margin-bottom:20px; display:flex; align-items:center; gap:14px; flex-wrap:wrap;">
+    <h1 style="font-size:24px; font-weight:700;">{{ part.name_part }}</h1>
+    {% if part.SAP_code %}<span class="chip chip-orange">SAP: {{ part.SAP_code }}</span>{% endif %}
+    {% if part.Drawing_number %}<span class="chip chip-blue">Výkres: {{ part.Drawing_number }}</span>{% endif %}
+    {% if part.HT_technology %}<span class="chip chip-green">{{ part.HT_technology }}</span>{% endif %}
+</div>
+
+<div class="detail-grid">
+
+    <!-- Základní informace -->
+    <div class="detail-section">
+        <div class="detail-section-title">Identifikace</div>
+        <div class="detail-row"><span class="detail-key">Název</span><span class="detail-val">{{ part.name_part }}</span></div>
+        <div class="detail-row"><span class="detail-key">SAP Nr.</span><span class="detail-val">{{ part.SAP_code or '—' }}</span></div>
+        <div class="detail-row"><span class="detail-key">Výkres Nr.</span><span class="detail-val">{{ part.Drawing_number or '—' }}</span></div>
+        <div class="detail-row"><span class="detail-key">Vytvořeno</span><span class="detail-val td-sub">{{ part.vytvoreno or '—' }}</span></div>
+        <div class="detail-row"><span class="detail-key">Upraveno</span><span class="detail-val td-sub">{{ part.upraveno or '—' }}</span></div>
+    </div>
+
+    <!-- Rozměry a výroba -->
+    <div class="detail-section">
+        <div class="detail-section-title">Rozměry &amp; výroba</div>
+        <div class="detail-row"><span class="detail-key">Průměr / šířka</span><span class="detail-val">{{ (part.diameter ~ ' mm') if part.diameter else '—' }}</span></div>
+        <div class="detail-row"><span class="detail-key">Délka</span><span class="detail-val">{{ (part.length ~ ' mm') if part.length else '—' }}</span></div>
+        <div class="detail-row"><span class="detail-key">Výška</span><span class="detail-val">{{ (part.height ~ ' mm') if part.height else '—' }}</span></div>
+        <div class="detail-row"><span class="detail-key">Hmotnost</span><span class="detail-val">{{ (part.weight_g ~ ' g') if part.weight_g else '—' }}</span></div>
+        <div class="detail-row"><span class="detail-key">Roční objem</span><span class="detail-val">{{ (part.annual_volume_pcs ~ ' ks') if part.annual_volume_pcs else '—' }}</span></div>
+        <div class="detail-row"><span class="detail-key">Velikost dávky</span><span class="detail-val">{{ (part.batch_size_pcs ~ ' ks') if part.batch_size_pcs else '—' }}</span></div>
+    </div>
+
+    <!-- Materiál -->
+    <div class="detail-section">
+        <div class="detail-section-title">Materiál</div>
+        {% if part.material_name %}
+        <div class="detail-row"><span class="detail-key">Název</span><span class="detail-val"><span class="chip chip-blue">{{ part.material_name }}</span></span></div>
+        <div class="detail-row"><span class="detail-key">Norma</span><span class="detail-val">{{ part.material_norm or '—' }}</span></div>
+        <div class="detail-row"><span class="detail-key">Typ</span><span class="detail-val">{{ part.material_type or '—' }}</span></div>
+        {% if part.material_pdf %}
+        <div class="detail-row"><span class="detail-key">Materiálový list</span>
+            <span class="detail-val"><a class="file-link" href="{{ url_for('uploaded_file', filename=part.material_pdf) }}" target="_blank">📄 Otevřít PDF</a></span></div>
+        {% endif %}
+        {% else %}
+        <div style="color:var(--text3); font-size:13px;">Materiál není přiřazen</div>
+        {% endif %}
+    </div>
+
+    <!-- Zařízení -->
+    <div class="detail-section">
+        <div class="detail-section-title">Zařízení</div>
+        {% if part.machine_name %}
+        <div class="detail-row"><span class="detail-key">Název</span><span class="detail-val"><span class="chip chip-gray">{{ part.machine_name }}</span></span></div>
+        <div class="detail-row"><span class="detail-key">Typ</span><span class="detail-val">{{ part.machine_type or '—' }}</span></div>
+        {% if part.machine_manual %}
+        <div class="detail-row"><span class="detail-key">Manuál</span>
+            <span class="detail-val"><a class="file-link" href="{{ url_for('uploaded_file', filename=part.machine_manual) }}" target="_blank">📄 Otevřít PDF</a></span></div>
+        {% endif %}
+        {% else %}
+        <div style="color:var(--text3); font-size:13px;">Zařízení není přiřazeno</div>
+        {% endif %}
+    </div>
+
+    <!-- HT Technologie -->
+    <div class="detail-section">
+        <div class="detail-section-title">HT Technologie</div>
+        <div class="detail-row"><span class="detail-key">Technologie</span><span class="detail-val">{{ part.HT_technology or '—' }}</span></div>
+        <div class="detail-row"><span class="detail-key">Teplota kalení</span><span class="detail-val td-orange">{{ (part.HT_temperature ~ ' °C') if part.HT_temperature else '—' }}</span></div>
+        <div class="detail-row"><span class="detail-key">Teplota popouštění</span><span class="detail-val td-orange">{{ (part.Tempering_temperature ~ ' °C') if part.Tempering_temperature else '—' }}</span></div>
+        <div class="detail-row"><span class="detail-key">Čas kalení</span><span class="detail-val">{{ (part.HT_time ~ ' min') if part.HT_time else '—' }}</span></div>
+        <div class="detail-row"><span class="detail-key">Čas popouštění</span><span class="detail-val">{{ (part.Tempering_time ~ ' min') if part.Tempering_time else '—' }}</span></div>
+    </div>
+
+    <!-- Tvrdost -->
+    <div class="detail-section">
+        <div class="detail-section-title">Tvrdost</div>
+        <div class="detail-row"><span class="detail-key">Povrch min</span>
+            <span class="detail-val">{{ (part.Surface_Hardness_min ~ ' ' ~ part.Surface_Hardness_Unit) if part.Surface_Hardness_min else '—' }}</span></div>
+        <div class="detail-row"><span class="detail-key">Povrch max</span>
+            <span class="detail-val">{{ (part.Surface_Hardness_max ~ ' ' ~ part.Surface_Hardness_Unit) if part.Surface_Hardness_max else '—' }}</span></div>
+        <div class="detail-row"><span class="detail-key">Jádro min</span>
+            <span class="detail-val">{{ (part.Core_Hardness_min ~ ' ' ~ part.Core_Hardness_Unit) if part.Core_Hardness_min else '—' }}</span></div>
+        <div class="detail-row"><span class="detail-key">Jádro max</span>
+            <span class="detail-val">{{ (part.Core_Hardness_max ~ ' ' ~ part.Core_Hardness_Unit) if part.Core_Hardness_max else '—' }}</span></div>
+    </div>
+
+    <!-- Cementace / Nitridace -->
+    {% if part.CHD_min or part.CHD_max or part.CLT_min or part.NHD_min %}
+    <div class="detail-section">
+        <div class="detail-section-title">Cementace / Nitridace</div>
+        {% if part.CHD_min or part.CHD_max %}
+        <div class="detail-row"><span class="detail-key">CHD min</span><span class="detail-val">{{ (part.CHD_min ~ ' mm') if part.CHD_min else '—' }}</span></div>
+        <div class="detail-row"><span class="detail-key">CHD max</span><span class="detail-val">{{ (part.CHD_max ~ ' mm') if part.CHD_max else '—' }}</span></div>
+        {% endif %}
+        {% if part.CLT_min or part.CLT_max %}
+        <div class="detail-row"><span class="detail-key">CLT min</span><span class="detail-val">{{ (part.CLT_min ~ ' mm') if part.CLT_min else '—' }}</span></div>
+        <div class="detail-row"><span class="detail-key">CLT max</span><span class="detail-val">{{ (part.CLT_max ~ ' mm') if part.CLT_max else '—' }}</span></div>
+        {% endif %}
+        {% if part.NHD_min or part.NHD_max %}
+        <div class="detail-row"><span class="detail-key">NHD min</span><span class="detail-val">{{ (part.NHD_min ~ ' mm') if part.NHD_min else '—' }}</span></div>
+        <div class="detail-row"><span class="detail-key">NHD max</span><span class="detail-val">{{ (part.NHD_max ~ ' mm') if part.NHD_max else '—' }}</span></div>
+        {% endif %}
+        {% if part.Porosity_max %}
+        <div class="detail-row"><span class="detail-key">Pórovitost max</span><span class="detail-val">{{ part.Porosity_max ~ ' mm' }}</span></div>
+        {% endif %}
+    </div>
+    {% endif %}
+
+    <!-- Dokumenty -->
+    <div class="detail-section">
+        <div class="detail-section-title">Dokumenty</div>
+        {% if part.drawing_path %}
+        <div class="detail-row"><span class="detail-key">Výkres</span>
+            <span class="detail-val"><a class="file-link" href="{{ url_for('uploaded_file', filename=part.drawing_path) }}" target="_blank">📐 Otevřít výkres</a></span></div>
+        {% endif %}
+        {% if part.calculation_path %}
+        <div class="detail-row"><span class="detail-key">Kalkulace</span>
+            <span class="detail-val"><a class="file-link" href="{{ url_for('uploaded_file', filename=part.calculation_path) }}" target="_blank">📊 Otevřít kalkulaci</a></span></div>
+        {% endif %}
+        {% if not part.drawing_path and not part.calculation_path %}
+        <div style="color:var(--text3); font-size:13px;">Žádné dokumenty</div>
+        {% endif %}
+    </div>
+
+    <!-- Poznámky -->
+    {% if part.Note or part.HT_Specifications %}
+    <div class="detail-section full">
+        <div class="detail-section-title">Poznámky a specifikace</div>
+        {% if part.HT_Specifications %}
+        <div style="margin-bottom:10px;">
+            <div style="font-size:11px; color:var(--text3); margin-bottom:4px;">HT Specifikace</div>
+            <div style="font-size:13px; white-space:pre-wrap;">{{ part.HT_Specifications }}</div>
+        </div>
+        {% endif %}
+        {% if part.Note %}
+        <div>
+            <div style="font-size:11px; color:var(--text3); margin-bottom:4px;">Poznámka</div>
+            <div style="font-size:13px; white-space:pre-wrap;">{{ part.Note }}</div>
+        </div>
+        {% endif %}
+    </div>
+    {% endif %}
+
+    <!-- Chemické složení materiálu -->
+    {% if part.material_name and (part.C_min or part.Cr_min or part.Ni_min) %}
+    <div class="detail-section full">
+        <div class="detail-section-title">Chemické složení — {{ part.material_name }}</div>
+        <div class="chem-grid">
+            {% for el in [('C', part.C_min, part.C_max), ('Si', part.Si_min, part.Si_max),
+                          ('Mn', part.Mn_min, part.Mn_max), ('P', part.P_min, part.P_max),
+                          ('S', part.S_min, part.S_max), ('Cr', part.Cr_min, part.Cr_max),
+                          ('Ni', part.Ni_min, part.Ni_max), ('Mo', part.Mo_min, part.Mo_max),
+                          ('V', part.V_min, part.V_max), ('Pb', part.Pb_min, part.Pb_max)] %}
+            {% if el[1] or el[2] %}
+            <div class="chem-item">
+                <div class="chem-label">{{ el[0] }}</div>
+                <div class="chem-val">{{ el[1] or '—' }} – {{ el[2] or '—' }}</div>
+            </div>
+            {% endif %}
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+
+</div>
+{% endblock %}
