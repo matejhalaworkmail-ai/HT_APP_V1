@@ -51,9 +51,17 @@
         <tbody>
             {% for m in machines %}
             <tr>
-                <td class="td-name">{{ m.name }}</td>
+                <td class="td-name"><a href="{{ url_for('machine_detail', id=m.id) }}" style="color:inherit; text-decoration:none;" onclick="event.stopPropagation()">{{ m.name }}</a></td>
                 <td class="td-sub">{{ m.type or '—' }}</td>
-                <td>{% if m.technology %}<span class="chip chip-orange">{{ m.technology }}</span>{% else %}—{% endif %}</td>
+                <td>
+                    {% if m.technologies %}
+                    <div style="display:flex; flex-wrap:wrap; gap:4px;">
+                        {% for t in m.technologies %}
+                        <span class="chip chip-orange">{{ t }}</span>
+                        {% endfor %}
+                    </div>
+                    {% else %}—{% endif %}
+                </td>
                 <td class="td-orange">{{ (m.Temperature_max ~ ' °C') if m.Temperature_max else '—' }}</td>
                 <td class="td-sub">{{ (m.Max_Load ~ ' kg') if m.Max_Load else '—' }}</td>
                 <td>

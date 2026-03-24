@@ -28,6 +28,8 @@
     <div class="detail-section">
         <div class="detail-section-title">Identifikace</div>
         <div class="detail-row"><span class="detail-key">Název</span><span class="detail-val">{{ part.name_part }}</span></div>
+        <div class="detail-row"><span class="detail-key">Index</span><span class="detail-val">{{ part.part_index or '—' }}</span></div>
+        <div class="detail-row"><span class="detail-key">Zákazník</span><span class="detail-val">{{ part.customer or '—' }}</span></div>
         <div class="detail-row"><span class="detail-key">SAP Nr.</span><span class="detail-val">{{ part.SAP_code or '—' }}</span></div>
         <div class="detail-row"><span class="detail-key">Výkres Nr.</span><span class="detail-val">{{ part.Drawing_number or '—' }}</span></div>
         <div class="detail-row"><span class="detail-key">Vytvořeno</span><span class="detail-val td-sub">{{ part.vytvoreno or '—' }}</span></div>

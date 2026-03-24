@@ -1,0 +1,188 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ material.name }} — TZ Databáze{% endblock %}
+
+{% block breadcrumb %}
+    <a href="{{ url_for('materials') }}">Materiály</a> <span>/ {{ material.name }}</span>
+{% endblock %}
+
+{% block topbar_actions %}
+    <a href="{{ url_for('material_form', id=material.id) }}" class="btn btn-ghost">Upravit</a>
+    <form method="post" action="{{ url_for('delete_material', id=material.id) }}"
+          onsubmit="return confirm('Opravdu smazat materiál {{ material.name }}?')">
+        <button class="btn btn-danger" type="submit">Smazat</button>
+    </form>
+{% endblock %}
+
+{% block content %}
+<div style="margin-bottom:20px; display:flex; align-items:center; gap:12px; flex-wrap:wrap;">
+    <h1 style="font-size:24px; font-weight:800; letter-spacing:-0.5px;">{{ material.name }}</h1>
+    {% if material.norm %}<span class="chip chip-gray">{{ material.norm }}</span>{% endif %}
+    {% if material.type %}<span class="chip chip-blue">{{ material.type }}</span>{% endif %}
+    {% if parts %}<span class="chip chip-green">{{ parts|length }} dílů</span>{% endif %}
+</div>
+
+<div class="detail-grid">
+
+    <!-- Základní informace -->
+    <div class="detail-section">
+        <div class="detail-section-title">Základní informace</div>
+        <div class="detail-row"><span class="detail-key">Název</span><span class="detail-val">{{ material.name }}</span></div>
+        <div class="detail-row"><span class="detail-key">Norma</span><span class="detail-val">{{ material.norm or '—' }}</span></div>
+        <div class="detail-row"><span class="detail-key">Typ</span><span class="detail-val">{{ material.type or '—' }}</span></div>
+    </div>
+
+    <!-- Tvrdost po kalení -->
+    <div class="detail-section">
+        <div class="detail-section-title">Tvrdost po kalení</div>
+        <div class="detail-row">
+            <span class="detail-key">Tvrdost min</span>
+            <span class="detail-val td-orange">{{ (material.Hardness_min ~ ' ' ~ (material.Hardness_Unit or 'HRC')) if material.Hardness_min else '—' }}</span>
+        </div>
+        <div class="detail-row">
+            <span class="detail-key">Tvrdost max</span>
+            <span class="detail-val td-orange">{{ (material.Hardness_max ~ ' ' ~ (material.Hardness_Unit or 'HRC')) if material.Hardness_max else '—' }}</span>
+        </div>
+        {% if material.Hardness_Nitridace_min or material.Hardness_Nitridace_max %}
+        <div class="divider"></div>
+        <div class="detail-row">
+            <span class="detail-key">Nitridace min</span>
+            <span class="detail-val td-orange">{{ (material.Hardness_Nitridace_min ~ ' ' ~ (material.Hardness_Nitridace_Unit or 'HV1')) if material.Hardness_Nitridace_min else '—' }}</span>
+        </div>
+        <div class="detail-row">
+            <span class="detail-key">Nitridace max</span>
+            <span class="detail-val td-orange">{{ (material.Hardness_Nitridace_max ~ ' ' ~ (material.Hardness_Nitridace_Unit or 'HV1')) if material.Hardness_Nitridace_max else '—' }}</span>
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- Kalení / Popouštění -->
+    <div class="detail-section">
+        <div class="detail-section-title">Kalení / Popouštění</div>
+        <div class="detail-row">
+            <span class="detail-key">Kalení olej</span>
+            <span class="detail-val td-orange">
+                {% if material.Hardening_Temp_Oil_min or material.Hardening_Temp_Oil_max %}
+                    {{ material.Hardening_Temp_Oil_min or '?' }} – {{ material.Hardening_Temp_Oil_max or '?' }} °C
+                {% else %}—{% endif %}
+            </span>
+        </div>
+        <div class="detail-row">
+            <span class="detail-key">Kalení voda</span>
+            <span class="detail-val td-orange">
+                {% if material.Hardening_Temp_Water_min or material.Hardening_Temp_Water_max %}
+                    {{ material.Hardening_Temp_Water_min or '?' }} – {{ material.Hardening_Temp_Water_max or '?' }} °C
+                {% else %}—{% endif %}
+            </span>
+        </div>
+        <div class="detail-row">
+            <span class="detail-key">Popouštění</span>
+            <span class="detail-val td-orange">
+                {% if material.Tempering_Temp_min or material.Tempering_Temp_max %}
+                    {{ material.Tempering_Temp_min or '?' }} – {{ material.Tempering_Temp_max or '?' }} °C
+                {% else %}—{% endif %}
+            </span>
+        </div>
+    </div>
+
+    <!-- Teploty procesů -->
+    <div class="detail-section">
+        <div class="detail-section-title">Doporučené teploty procesů</div>
+        {% for label, mn, mx in [
+            ('Cementace', material.Temp_Cementace_min, material.Temp_Cementace_max),
+            ('Nitrocementace', material.Temp_Nitrocementace_min, material.Temp_Nitrocementace_max),
+            ('Nitridace', material.Temp_Nitridace_min, material.Temp_Nitridace_max),
+            ('Karbonitridace', material.Temp_Karbonitridace_min, material.Temp_Karbonitridace_max)
+        ] %}
+        <div class="detail-row">
+            <span class="detail-key">{{ label }}</span>
+            <span class="detail-val td-orange">
+                {% if mn or mx %}{{ mn or '?' }} – {{ mx or '?' }} °C{% else %}—{% endif %}
+            </span>
+        </div>
+        {% endfor %}
+    </div>
+
+    <!-- Chemické složení -->
+    {% set has_chem = material.C_min or material.C_max or material.Cr_min or material.Cr_max or material.Ni_min or material.Ni_max %}
+    {% if has_chem %}
+    <div class="detail-section full">
+        <div class="detail-section-title">Chemické složení (hm. %)</div>
+        <div class="chem-grid">
+            {% for el, mn, mx in [
+                ('C', material.C_min, material.C_max),
+                ('Si', material.Si_min, material.Si_max),
+                ('Mn', material.Mn_min, material.Mn_max),
+                ('P', material.P_min, material.P_max),
+                ('S', material.S_min, material.S_max),
+                ('Cr', material.Cr_min, material.Cr_max),
+                ('Ni', material.Ni_min, material.Ni_max),
+                ('Mo', material.Mo_min, material.Mo_max),
+                ('V', material.V_min, material.V_max),
+                ('Pb', material.Pb_min, material.Pb_max)
+            ] %}
+            {% if mn or mx %}
+            <div class="chem-item">
+                <div class="chem-label">{{ el }}</div>
+                <div class="chem-val">{{ mn or '—' }} – {{ mx or '—' }}</div>
+            </div>
+            {% endif %}
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Materiálové listy -->
+    {% if mat_pdfs %}
+    <div class="detail-section">
+        <div class="detail-section-title">Materiálové listy</div>
+        {% for path in mat_pdfs %}
+        <div class="file-item">
+            <a class="file-link" href="{{ url_for('uploaded_file', filename=path) }}" target="_blank">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14,2 14,8 20,8"/></svg>
+                {{ path.split('/')[-1] }}
+            </a>
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+
+    <!-- Poznámka -->
+    {% if material.Note %}
+    <div class="detail-section">
+        <div class="detail-section-title">Poznámka</div>
+        <div style="font-size:13px; color:var(--text2); white-space:pre-wrap; line-height:1.6;">{{ material.Note }}</div>
+    </div>
+    {% endif %}
+
+    <!-- Díly s tímto materiálem -->
+    {% if parts %}
+    <div class="detail-section full">
+        <div class="detail-section-title">Díly s tímto materiálem <span class="panel-count">{{ parts|length }}</span></div>
+        <table class="tab">
+            <thead>
+                <tr>
+                    <th>Název dílu</th>
+                    <th>Index</th>
+                    <th>Zákazník</th>
+                    <th>SAP Nr.</th>
+                    <th>Výkres Nr.</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for p in parts %}
+                <tr onclick="window.location='{{ url_for('parts_detail', id=p.id) }}'" style="cursor:pointer;">
+                    <td class="td-name">{{ p.name_part }}</td>
+                    <td class="td-mono">{{ p.part_index or '—' }}</td>
+                    <td class="td-sub">{{ p.customer or '—' }}</td>
+                    <td class="td-mono">{{ p.SAP_code or '—' }}</td>
+                    <td class="td-mono">{{ p.Drawing_number or '—' }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% endif %}
+
+</div>
+{% endblock %}

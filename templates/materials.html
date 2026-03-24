@@ -46,7 +46,7 @@
         <tbody>
             {% for m in materials %}
             <tr>
-                <td class="td-name">{{ m.name }}</td>
+                <td class="td-name"><a href="{{ url_for('material_detail', id=m.id) }}" style="color:inherit; text-decoration:none;">{{ m.name }}</a></td>
                 <td class="td-mono">{{ m.norm or '—' }}</td>
                 <td>{% if m.type %}<span class="chip chip-blue">{{ m.type }}</span>{% else %}—{% endif %}</td>
                 <td class="td-sub">

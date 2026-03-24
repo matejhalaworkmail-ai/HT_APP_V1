@@ -41,12 +41,6 @@
                         {% endfor %}
                     </select>
                 </label>
-                <label class="label">
-                    Poznámka
-                    <input type="text" name="Note"
-                           value="{{ material.Note if material else '' }}"
-                           placeholder="Volitelná poznámka">
-                </label>
             </div>
         </div>
 
@@ -198,6 +192,33 @@
             </div>
         </div>
 
+        <!-- ── Tvrdost po nitridaci ──────────────────────── -->
+        <div class="form-section">
+            <div class="form-section-title">Tvrdost po nitridaci</div>
+            <div class="form-grid-3">
+                <label class="label">
+                    Tvrdost min
+                    <input type="number" name="Hardness_Nitridace_min"
+                           value="{{ material.Hardness_Nitridace_min if material and material.Hardness_Nitridace_min else '' }}"
+                           placeholder="600">
+                </label>
+                <label class="label">
+                    Tvrdost max
+                    <input type="number" name="Hardness_Nitridace_max"
+                           value="{{ material.Hardness_Nitridace_max if material and material.Hardness_Nitridace_max else '' }}"
+                           placeholder="750">
+                </label>
+                <label class="label">
+                    Jednotka
+                    <select name="Hardness_Nitridace_Unit">
+                        {% for u in ['HV1','HV0,1','HV0,3','HV0,5','HV5','HV10','HRC','HB','HRA'] %}
+                        <option value="{{ u }}" {% if material and material.Hardness_Nitridace_Unit == u %}selected{% elif not material and u == 'HV1' %}selected{% endif %}>{{ u }}</option>
+                        {% endfor %}
+                    </select>
+                </label>
+            </div>
+        </div>
+
         <!-- ── Materiálové listy (PDF) ────────────────────── -->
         <div class="form-section">
             <div class="form-section-title">Materiálové listy (PDF)</div>
@@ -230,6 +251,15 @@
             <div style="margin-top:6px; font-size:12px; color:var(--text3);">
                 Podržte Ctrl (nebo Cmd na Mac) pro výběr více souborů.
             </div>
+        </div>
+
+        <!-- ── Poznámka ────────────────────────────────────── -->
+        <div class="form-section">
+            <div class="form-section-title">Poznámka</div>
+            <label class="label">
+                Poznámka
+                <textarea name="Note" placeholder="Volitelná poznámka…">{{ material.Note if material and material.Note else '' }}</textarea>
+            </label>
         </div>
 
         <div class="form-actions">
