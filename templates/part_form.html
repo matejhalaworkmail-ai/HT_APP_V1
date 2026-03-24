@@ -1,0 +1,364 @@
+{% extends 'base.html' %}
+
+{% block title %}{% if id %}Upravit díl{% else %}Přidat díl{% endif %} — TZ Databáze{% endblock %}
+
+{% block breadcrumb %}
+    <a href="{{ url_for('Parts') }}">Díly</a>
+    <span>/ {% if id %}Upravit{% else %}Přidat nový díl{% endif %}</span>
+{% endblock %}
+
+{% block content %}
+<div class="form-wrap">
+    <div class="page-title">{% if id %}Upravit díl{% else %}Přidat nový díl{% endif %}</div>
+
+    {% if error %}
+    <div class="alert-error">⚠ {{ error }}</div>
+    {% endif %}
+
+    <form method="post" enctype="multipart/form-data"
+          action="{% if id %}{{ url_for('parts_form', id=id) }}{% else %}{{ url_for('parts_form') }}{% endif %}">
+
+        <!-- ── Identifikace ─────────────────────────────────── -->
+        <div class="form-section">
+            <div class="form-section-title">Identifikace dílu</div>
+            <div class="form-grid">
+                <label class="label col-span-2">
+                    Název dílu *
+                    <input type="text" name="name_part" value="{{ part.name_part if part else '' }}"
+                           placeholder="Název dílu" required>
+                </label>
+                <label class="label">
+                    SAP Nr.
+                    <input type="text" name="SAP_code" value="{{ part.SAP_code if part else '' }}"
+                           placeholder="např. 1234567890">
+                </label>
+                <label class="label">
+                    Výkres Nr.
+                    <input type="text" name="Drawing_number" value="{{ part.Drawing_number if part else '' }}"
+                           placeholder="např. DRW-001">
+                </label>
+            </div>
+        </div>
+
+        <!-- ── Materiál ─────────────────────────────────────── -->
+        <div class="form-section">
+            <div class="form-section-title">Materiál</div>
+            <div class="form-grid">
+                <label class="label col-span-2">
+                    Materiál (vyberte ze seznamu nebo začněte psát)
+                    <div class="autocomplete-wrap">
+                        <input type="text" id="material_search"
+                               placeholder="Začněte psát název materiálu…"
+                               autocomplete="off"
+                               value="{{ part.material_name if part and part.material_name is defined and part.material_name else '' }}">
+                        <div class="autocomplete-list" id="material_list"></div>
+                    </div>
+                    <!-- Hidden select keeps the actual ID for form submission -->
+                    <select name="Material_id" id="material_id_select"
+                            style="margin-top:8px; font-size:12px; color:var(--text3);">
+                        <option value="">— žádný materiál —</option>
+                        {% for m in materials %}
+                        <option value="{{ m.id }}"
+                            {% if part and part.Material_id and part.Material_id|string == m.id|string %}selected{% endif %}>
+                            {{ m.name }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </label>
+            </div>
+            <div style="margin-top:10px; font-size:12px; color:var(--text3);">
+                Materiál není v seznamu?
+                <a href="{{ url_for('material_form') }}" target="_blank" style="color:var(--orange); text-decoration:none;">
+                    + Přidat nový materiál
+                </a>
+            </div>
+        </div>
+
+        <!-- ── Zařízení ─────────────────────────────────────── -->
+        <div class="form-section">
+            <div class="form-section-title">Zařízení</div>
+            <div class="form-grid">
+                <label class="label col-span-2">
+                    Zařízení
+                    <select name="Machine_id">
+                        <option value="">— žádné zařízení —</option>
+                        {% for m in machines %}
+                        <option value="{{ m.id }}"
+                            {% if part and part.Machine_id and part.Machine_id|string == m.id|string %}selected{% endif %}>
+                            {{ m.name }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </label>
+            </div>
+            <div style="margin-top:10px; font-size:12px; color:var(--text3);">
+                Zařízení není v seznamu?
+                <a href="{{ url_for('machine_form') }}" target="_blank" style="color:var(--orange); text-decoration:none;">
+                    + Přidat nové zařízení
+                </a>
+            </div>
+        </div>
+
+        <!-- ── Rozměry ──────────────────────────────────────── -->
+        <div class="form-section">
+            <div class="form-section-title">Rozměry &amp; hmotnost</div>
+            <div class="form-grid-4">
+                <label class="label">
+                    Průměr / Šířka (mm)
+                    <input type="number" step="0.01" name="diameter"
+                           value="{{ part.diameter if part and part.diameter else '' }}"
+                           placeholder="0.00">
+                </label>
+                <label class="label">
+                    Délka (mm)
+                    <input type="number" step="0.01" name="length"
+                           value="{{ part.length if part and part.length else '' }}"
+                           placeholder="0.00">
+                </label>
+                <label class="label">
+                    Výška (mm)
+                    <input type="number" step="0.01" name="height"
+                           value="{{ part.height if part and part.height else '' }}"
+                           placeholder="0.00">
+                </label>
+                <label class="label">
+                    Hmotnost (g)
+                    <input type="number" step="0.01" name="weight_g"
+                           value="{{ part.weight_g if part and part.weight_g else '' }}"
+                           placeholder="0.00">
+                </label>
+            </div>
+        </div>
+
+        <!-- ── Výroba ───────────────────────────────────────── -->
+        <div class="form-section">
+            <div class="form-section-title">Výroba</div>
+            <div class="form-grid">
+                <label class="label">
+                    Roční objem (ks)
+                    <input type="number" name="annual_volume_pcs"
+                           value="{{ part.annual_volume_pcs if part and part.annual_volume_pcs else '' }}"
+                           placeholder="0">
+                </label>
+                <label class="label">
+                    Velikost dávky (ks)
+                    <input type="number" name="batch_size_pcs"
+                           value="{{ part.batch_size_pcs if part and part.batch_size_pcs else '' }}"
+                           placeholder="0">
+                </label>
+            </div>
+        </div>
+
+        <!-- ── HT Technologie ───────────────────────────────── -->
+        <div class="form-section">
+            <div class="form-section-title">HT Technologie</div>
+            <div class="form-grid">
+                <label class="label col-span-2">
+                    Technologie
+                    <select name="HT_technology">
+                        <option value="">— vyberte technologii —</option>
+                        {% for tech in ['Kalení', 'Cementování', 'Nitridování', 'Nitrokarburování',
+                                        'Kalení + Popouštění', 'Cementování + Kalení', 'Žíhání',
+                                        'Normalizační žíhání', 'Indukční kalení'] %}
+                        <option value="{{ tech }}"
+                            {% if part and part.HT_technology == tech %}selected{% endif %}>{{ tech }}</option>
+                        {% endfor %}
+                        <option value="Jiné"
+                            {% if part and part.HT_technology and part.HT_technology not in
+                              ['Kalení','Cementování','Nitridování','Nitrokarburování',
+                               'Kalení + Popouštění','Cementování + Kalení','Žíhání',
+                               'Normalizační žíhání','Indukční kalení'] %}selected{% endif %}>Jiné</option>
+                    </select>
+                </label>
+                <label class="label">
+                    Teplota kalení (°C)
+                    <input type="number" name="HT_temperature"
+                           value="{{ part.HT_temperature if part and part.HT_temperature else '' }}"
+                           placeholder="850">
+                </label>
+                <label class="label">
+                    Teplota popouštění (°C)
+                    <input type="number" name="Tempering_temperature"
+                           value="{{ part.Tempering_temperature if part and part.Tempering_temperature else '' }}"
+                           placeholder="200">
+                </label>
+                <label class="label">
+                    Čas kalení (min)
+                    <input type="number" name="HT_time"
+                           value="{{ part.HT_time if part and part.HT_time else '' }}"
+                           placeholder="60">
+                </label>
+                <label class="label">
+                    Čas popouštění (min)
+                    <input type="number" name="Tempering_time"
+                           value="{{ part.Tempering_time if part and part.Tempering_time else '' }}"
+                           placeholder="120">
+                </label>
+            </div>
+        </div>
+
+        <!-- ── Tvrdost ──────────────────────────────────────── -->
+        <div class="form-section">
+            <div class="form-section-title">Požadavky na tvrdost</div>
+            <div class="form-grid-3">
+                <label class="label">
+                    Povrch min
+                    <input type="number" name="Surface_Hardness_min"
+                           value="{{ part.Surface_Hardness_min if part and part.Surface_Hardness_min else '' }}"
+                           placeholder="58">
+                </label>
+                <label class="label">
+                    Povrch max
+                    <input type="number" name="Surface_Hardness_max"
+                           value="{{ part.Surface_Hardness_max if part and part.Surface_Hardness_max else '' }}"
+                           placeholder="64">
+                </label>
+                <label class="label">
+                    Jednotka
+                    <select name="Surface_Hardness_Unit">
+                        {% for u in ['HRC','HV','HB','HRA'] %}
+                        <option value="{{ u }}" {% if part and part.Surface_Hardness_Unit == u %}selected{% elif not part and u == 'HRC' %}selected{% endif %}>{{ u }}</option>
+                        {% endfor %}
+                    </select>
+                </label>
+                <label class="label">
+                    Jádro min
+                    <input type="number" name="Core_Hardness_min"
+                           value="{{ part.Core_Hardness_min if part and part.Core_Hardness_min else '' }}"
+                           placeholder="35">
+                </label>
+                <label class="label">
+                    Jádro max
+                    <input type="number" name="Core_Hardness_max"
+                           value="{{ part.Core_Hardness_max if part and part.Core_Hardness_max else '' }}"
+                           placeholder="45">
+                </label>
+                <label class="label">
+                    Jednotka
+                    <select name="Core_Hardness_Unit">
+                        {% for u in ['HRC','HV','HB','HRA'] %}
+                        <option value="{{ u }}" {% if part and part.Core_Hardness_Unit == u %}selected{% elif not part and u == 'HRC' %}selected{% endif %}>{{ u }}</option>
+                        {% endfor %}
+                    </select>
+                </label>
+            </div>
+        </div>
+
+        <!-- ── Cementace / Nitridace ────────────────────────── -->
+        <div class="form-section">
+            <div class="form-section-title">Cementace / Nitridace (volitelné)</div>
+            <div class="form-grid-3">
+                <label class="label">CHD min (mm)<input type="number" step="0.01" name="CHD_min" value="{{ part.CHD_min if part and part.CHD_min else '' }}" placeholder="0.00"></label>
+                <label class="label">CHD max (mm)<input type="number" step="0.01" name="CHD_max" value="{{ part.CHD_max if part and part.CHD_max else '' }}" placeholder="0.00"></label>
+                <div></div>
+                <label class="label">CLT min (mm)<input type="number" step="0.01" name="CLT_min" value="{{ part.CLT_min if part and part.CLT_min else '' }}" placeholder="0.00"></label>
+                <label class="label">CLT max (mm)<input type="number" step="0.01" name="CLT_max" value="{{ part.CLT_max if part and part.CLT_max else '' }}" placeholder="0.00"></label>
+                <div></div>
+                <label class="label">NHD min (mm)<input type="number" step="0.01" name="NHD_min" value="{{ part.NHD_min if part and part.NHD_min else '' }}" placeholder="0.00"></label>
+                <label class="label">NHD max (mm)<input type="number" step="0.01" name="NHD_max" value="{{ part.NHD_max if part and part.NHD_max else '' }}" placeholder="0.00"></label>
+                <label class="label">Pórovitost max (mm)<input type="number" step="0.01" name="Porosity_max" value="{{ part.Porosity_max if part and part.Porosity_max else '' }}" placeholder="0.00"></label>
+            </div>
+        </div>
+
+        <!-- ── Dokumenty ────────────────────────────────────── -->
+        <div class="form-section">
+            <div class="form-section-title">Dokumenty</div>
+            <div class="form-grid">
+                <label class="label">
+                    Výkres (PDF, DWG, DXF, obrázek)
+                    <input type="file" name="drawing_file" accept=".pdf,.dwg,.dxf,.png,.jpg,.jpeg">
+                    {% if part and part.drawing_path %}
+                    <div style="margin-top:6px; font-size:12px;">
+                        Aktuální: <a class="file-link" href="{{ url_for('uploaded_file', filename=part.drawing_path) }}" target="_blank">📐 {{ part.drawing_path.split('/')[-1] }}</a>
+                    </div>
+                    {% endif %}
+                </label>
+                <label class="label">
+                    Kalkulace (PDF, Excel)
+                    <input type="file" name="calculation_file" accept=".pdf,.xlsx,.xls,.doc,.docx">
+                    {% if part and part.calculation_path %}
+                    <div style="margin-top:6px; font-size:12px;">
+                        Aktuální: <a class="file-link" href="{{ url_for('uploaded_file', filename=part.calculation_path) }}" target="_blank">📊 {{ part.calculation_path.split('/')[-1] }}</a>
+                    </div>
+                    {% endif %}
+                </label>
+            </div>
+        </div>
+
+        <!-- ── Poznámky ─────────────────────────────────────── -->
+        <div class="form-section">
+            <div class="form-section-title">Specifikace a poznámky</div>
+            <div class="form-grid">
+                <label class="label col-span-2">
+                    HT Specifikace
+                    <textarea name="HT_Specifications" placeholder="Speciální požadavky na tepelné zpracování…">{{ part.HT_Specifications if part and part.HT_Specifications else '' }}</textarea>
+                </label>
+                <label class="label col-span-2">
+                    Poznámka
+                    <textarea name="Note" placeholder="Obecné poznámky…">{{ part.Note if part and part.Note else '' }}</textarea>
+                </label>
+            </div>
+        </div>
+
+        <div class="form-actions">
+            <a href="{{ url_for('Parts') }}" class="btn btn-ghost">Zrušit</a>
+            <button type="submit" class="btn btn-primary">
+                {% if id %}💾 Uložit změny{% else %}+ Přidat díl{% endif %}
+            </button>
+        </div>
+    </form>
+</div>
+
+<script>
+/* ── Material autocomplete ── */
+const searchInput = document.getElementById('material_search');
+const listEl      = document.getElementById('material_list');
+const selectEl    = document.getElementById('material_id_select');
+
+let debounceTimer;
+
+searchInput.addEventListener('input', function() {
+    clearTimeout(debounceTimer);
+    const q = this.value.trim();
+    if (q.length < 1) { listEl.style.display = 'none'; return; }
+    debounceTimer = setTimeout(() => {
+        fetch('/api/materials/search?q=' + encodeURIComponent(q))
+            .then(r => r.json())
+            .then(items => {
+                listEl.innerHTML = '';
+                if (items.length === 0) { listEl.style.display = 'none'; return; }
+                items.forEach(item => {
+                    const div = document.createElement('div');
+                    div.className = 'autocomplete-item';
+                    div.textContent = item.name;
+                    div.addEventListener('mousedown', function(e) {
+                        e.preventDefault();
+                        searchInput.value = item.name;
+                        // sync the select
+                        for (let opt of selectEl.options) {
+                            if (opt.value == item.id) { opt.selected = true; break; }
+                        }
+                        listEl.style.display = 'none';
+                    });
+                    listEl.appendChild(div);
+                });
+                listEl.style.display = 'block';
+            });
+    }, 200);
+});
+
+searchInput.addEventListener('blur', () => {
+    setTimeout(() => { listEl.style.display = 'none'; }, 200);
+});
+
+searchInput.addEventListener('focus', function() {
+    if (this.value.trim()) this.dispatchEvent(new Event('input'));
+});
+
+/* sync text input when select changes */
+selectEl.addEventListener('change', function() {
+    const opt = this.options[this.selectedIndex];
+    searchInput.value = opt.value ? opt.text : '';
+});
+</script>
+{% endblock %}

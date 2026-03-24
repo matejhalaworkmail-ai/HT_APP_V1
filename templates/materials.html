@@ -1,0 +1,102 @@
+{% extends 'base.html' %}
+
+{% block title %}Materiály — TZ Databáze{% endblock %}
+
+{% block breadcrumb %}
+    TZ Databáze <span>/ Materiály</span>
+{% endblock %}
+
+{% block topbar_actions %}
+    <a href="{{ url_for('material_form') }}" class="btn btn-primary">+ Přidat materiál</a>
+{% endblock %}
+
+{% block content %}
+<div class="stats">
+    <div class="stat stat-b">
+        <div class="stat-label">Celkem materiálů</div>
+        <div class="stat-val">{{ materials|length }}</div>
+        <div class="stat-sub">v databázi</div>
+    </div>
+</div>
+
+<div class="table-panel">
+    <div class="panel-header">
+        <div>
+            <span class="panel-title">Seznam materiálů</span>
+            <span class="panel-count">{{ materials|length }} záznamů</span>
+        </div>
+        <a href="{{ url_for('material_form') }}" class="btn btn-primary btn-sm">+ Přidat</a>
+    </div>
+
+    {% if materials %}
+    <table class="tab">
+        <thead>
+            <tr>
+                <th>Název</th>
+                <th>Norma</th>
+                <th>Typ</th>
+                <th>Tvrdost</th>
+                <th>Teplota kalení (olej)</th>
+                <th>Teplota popouštění</th>
+                <th>Použito v dílech</th>
+                <th>Materiálový list</th>
+                <th></th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for m in materials %}
+            <tr>
+                <td class="td-name">{{ m.name }}</td>
+                <td class="td-mono">{{ m.norm or '—' }}</td>
+                <td>{% if m.type %}<span class="chip chip-blue">{{ m.type }}</span>{% else %}—{% endif %}</td>
+                <td class="td-sub">
+                    {% if m.Hardness_min or m.Hardness_max %}
+                        {{ m.Hardness_min or '?' }}–{{ m.Hardness_max or '?' }} {{ m.Hardness_Unit or 'HRC' }}
+                    {% else %}—{% endif %}
+                </td>
+                <td class="td-orange">
+                    {% if m.Hardening_Temp_Oil_min or m.Hardening_Temp_Oil_max %}
+                        {{ m.Hardening_Temp_Oil_min or '?' }}–{{ m.Hardening_Temp_Oil_max or '?' }} °C
+                    {% else %}—{% endif %}
+                </td>
+                <td class="td-sub">
+                    {% if m.Tempering_Temp_min or m.Tempering_Temp_max %}
+                        {{ m.Tempering_Temp_min or '?' }}–{{ m.Tempering_Temp_max or '?' }} °C
+                    {% else %}—{% endif %}
+                </td>
+                <td>
+                    {% set cnt = quantity.get(m.id, 0) %}
+                    {% if cnt > 0 %}
+                        <span class="chip chip-green">{{ cnt }} dílů</span>
+                    {% else %}
+                        <span style="color:var(--text3); font-size:12px;">0</span>
+                    {% endif %}
+                </td>
+                <td>
+                    {% if m.pdf_path %}
+                        <a class="file-link" href="{{ url_for('uploaded_file', filename=m.pdf_path) }}" target="_blank">📄 PDF</a>
+                    {% else %}—{% endif %}
+                </td>
+                <td>
+                    <div class="td-actions">
+                        <a href="{{ url_for('material_form', id=m.id) }}" class="btn btn-ghost btn-sm">Upravit</a>
+                        <form method="post" action="{{ url_for('delete_material', id=m.id) }}"
+                              onsubmit="return confirm('Smazat materiál {{ m.name }}?')">
+                            <button class="btn btn-danger btn-sm" type="submit">Smazat</button>
+                        </form>
+                    </div>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% else %}
+    <div class="empty">
+        <div class="empty-icon">🧱</div>
+        <div class="empty-text">Zatím nejsou přidány žádné materiály</div>
+        <br>
+        <a href="{{ url_for('material_form') }}" class="btn btn-primary">Přidat první materiál</a>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

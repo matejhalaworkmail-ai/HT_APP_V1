@@ -1,0 +1,102 @@
+{% extends 'base.html' %}
+
+{% block title %}{% if id %}Upravit zařízení{% else %}Přidat zařízení{% endif %} — TZ Databáze{% endblock %}
+
+{% block breadcrumb %}
+    <a href="{{ url_for('machines') }}">Zařízení</a>
+    <span>/ {% if id %}Upravit{% else %}Přidat nové{% endif %}</span>
+{% endblock %}
+
+{% block content %}
+<div class="form-wrap">
+    <div class="page-title">{% if id %}Upravit zařízení{% else %}Přidat nové zařízení{% endif %}</div>
+
+    <form method="post" enctype="multipart/form-data"
+          action="{% if id %}{{ url_for('machine_form', id=id) }}{% else %}{{ url_for('machine_form') }}{% endif %}">
+
+        <!-- ── Základní informace ─────────────────────────── -->
+        <div class="form-section">
+            <div class="form-section-title">Základní informace</div>
+            <div class="form-grid">
+                <label class="label col-span-2">
+                    Název zařízení *
+                    <input type="text" name="name" required
+                           value="{{ machine.name if machine else '' }}"
+                           placeholder="např. Pec KS-500, Kadicí stroj…">
+                </label>
+                <label class="label">
+                    Typ zařízení
+                    <select name="type">
+                        <option value="">— vyberte typ —</option>
+                        {% for t in ['Komorová pec', 'Průběžná pec', 'Vakuová pec', 'Solná lázeň',
+                                     'Indukční zařízení', 'Nitridační pec', 'Popouštěcí pec', 'Jiné'] %}
+                        <option value="{{ t }}" {% if machine and machine.type == t %}selected{% endif %}>{{ t }}</option>
+                        {% endfor %}
+                    </select>
+                </label>
+                <label class="label">
+                    Technologie
+                    <select name="technology">
+                        <option value="">— vyberte technologii —</option>
+                        {% for t in ['Kalení', 'Cementování', 'Nitridování', 'Nitrokarburování',
+                                     'Žíhání', 'Popouštění', 'Indukční kalení', 'Univerzální'] %}
+                        <option value="{{ t }}" {% if machine and machine.technology == t %}selected{% endif %}>{{ t }}</option>
+                        {% endfor %}
+                    </select>
+                </label>
+            </div>
+        </div>
+
+        <!-- ── Technické parametry ────────────────────────── -->
+        <div class="form-section">
+            <div class="form-section-title">Technické parametry</div>
+            <div class="form-grid">
+                <label class="label">
+                    Max. teplota (°C)
+                    <input type="number" name="Temperature_max"
+                           value="{{ machine.Temperature_max if machine and machine.Temperature_max else '' }}"
+                           placeholder="1050">
+                </label>
+                <label class="label">
+                    Max. vsázka (kg)
+                    <input type="number" step="0.1" name="Max_Load"
+                           value="{{ machine.Max_Load if machine and machine.Max_Load else '' }}"
+                           placeholder="500">
+                </label>
+            </div>
+            <div style="margin-top:14px;">
+                <label class="checkbox-label">
+                    <input type="checkbox" name="aktivni" value="1"
+                           {% if machine is none or machine.aktivni %}checked{% endif %}>
+                    Zařízení je aktivní (bude dostupné při přidávání dílů)
+                </label>
+            </div>
+        </div>
+
+        <!-- ── Manuál ─────────────────────────────────────── -->
+        <div class="form-section">
+            <div class="form-section-title">Dokumentace / Manuál (PDF)</div>
+            <label class="label">
+                Nahrát manuál
+                <input type="file" name="manual_file" accept=".pdf,.doc,.docx">
+            </label>
+            {% if machine and machine.manual_path %}
+            <div style="margin-top:10px; font-size:13px;">
+                Aktuální soubor:
+                <a class="file-link" href="{{ url_for('uploaded_file', filename=machine.manual_path) }}" target="_blank">
+                    📄 {{ machine.manual_path.split('/')[-1] }}
+                </a>
+                <span style="color:var(--text3); font-size:12px; margin-left:8px;">(nahrátím nového souboru nahradíte stávající)</span>
+            </div>
+            {% endif %}
+        </div>
+
+        <div class="form-actions">
+            <a href="{{ url_for('machines') }}" class="btn btn-ghost">Zrušit</a>
+            <button type="submit" class="btn btn-primary">
+                {% if id %}💾 Uložit změny{% else %}+ Přidat zařízení{% endif %}
+            </button>
+        </div>
+    </form>
+</div>
+{% endblock %}
