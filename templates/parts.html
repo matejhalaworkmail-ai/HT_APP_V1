@@ -39,11 +39,12 @@
         <thead>
             <tr>
                 <th>Název dílu</th>
+                <th>Index</th>
+                <th>Zákazník</th>
                 <th>SAP Nr.</th>
                 <th>Výkres Nr.</th>
                 <th>Materiál</th>
                 <th>Rozměry (mm)</th>
-                <th>Hmotnost</th>
                 <th>Roč. objem</th>
                 <th>Zařízení</th>
                 <th></th>
@@ -53,6 +54,8 @@
             {% for p in parts %}
             <tr onclick="window.location='{{ url_for('parts_detail', id=p.id) }}'">
                 <td class="td-name">{{ p.name_part }}</td>
+                <td class="td-mono">{{ p.part_index or '—' }}</td>
+                <td class="td-sub">{{ p.customer or '—' }}</td>
                 <td class="td-mono">{{ p.SAP_code or '—' }}</td>
                 <td class="td-mono">{{ p.Drawing_number or '—' }}</td>
                 <td>
@@ -67,7 +70,6 @@
                     {% if p.height %}{% set _ = dims.append('H' ~ p.height) %}{% endif %}
                     {{ dims | join(' × ') or '—' }}
                 </td>
-                <td class="td-sub">{{ (p.weight_g ~ ' g') if p.weight_g else '—' }}</td>
                 <td class="td-sub">{{ p.annual_volume_pcs or '—' }}</td>
                 <td>
                     {% if p.machine_name %}

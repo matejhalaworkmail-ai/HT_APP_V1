@@ -1,0 +1,116 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ machine.name }} — TZ Databáze{% endblock %}
+
+{% block breadcrumb %}
+    <a href="{{ url_for('machines') }}">Zařízení</a> <span>/ {{ machine.name }}</span>
+{% endblock %}
+
+{% block topbar_actions %}
+    <a href="{{ url_for('machine_form', id=machine.id) }}" class="btn btn-ghost">Upravit</a>
+    <form method="post" action="{{ url_for('delete_machine', id=machine.id) }}"
+          onsubmit="return confirm('Opravdu smazat zařízení {{ machine.name }}?')">
+        <button class="btn btn-danger" type="submit">Smazat</button>
+    </form>
+{% endblock %}
+
+{% block content %}
+<div style="margin-bottom:20px; display:flex; align-items:center; gap:12px; flex-wrap:wrap;">
+    <h1 style="font-size:24px; font-weight:800; letter-spacing:-0.5px;">{{ machine.name }}</h1>
+    {% if machine.type %}<span class="chip chip-gray">{{ machine.type }}</span>{% endif %}
+    {% if machine.aktivni %}
+        <span class="chip chip-green">Aktivní</span>
+    {% else %}
+        <span class="chip chip-red">Neaktivní</span>
+    {% endif %}
+    {% if parts %}<span class="chip chip-blue">{{ parts|length }} dílů</span>{% endif %}
+</div>
+
+<div class="detail-grid">
+
+    <!-- Základní informace -->
+    <div class="detail-section">
+        <div class="detail-section-title">Základní informace</div>
+        <div class="detail-row"><span class="detail-key">Název</span><span class="detail-val">{{ machine.name }}</span></div>
+        <div class="detail-row"><span class="detail-key">Typ</span><span class="detail-val">{{ machine.type or '—' }}</span></div>
+        <div class="detail-row">
+            <span class="detail-key">Stav</span>
+            <span class="detail-val">
+                {% if machine.aktivni %}<span class="chip chip-green">Aktivní</span>{% else %}<span class="chip chip-red">Neaktivní</span>{% endif %}
+            </span>
+        </div>
+    </div>
+
+    <!-- Technické parametry -->
+    <div class="detail-section">
+        <div class="detail-section-title">Technické parametry</div>
+        <div class="detail-row">
+            <span class="detail-key">Max. teplota</span>
+            <span class="detail-val td-orange">{{ (machine.Temperature_max ~ ' °C') if machine.Temperature_max else '—' }}</span>
+        </div>
+        <div class="detail-row">
+            <span class="detail-key">Max. vsázka</span>
+            <span class="detail-val">{{ (machine.Max_Load ~ ' kg') if machine.Max_Load else '—' }}</span>
+        </div>
+    </div>
+
+    <!-- Technologie -->
+    <div class="detail-section full">
+        <div class="detail-section-title">Podporované technologie</div>
+        {% if technologies %}
+        <div style="display:flex; flex-wrap:wrap; gap:8px; padding-top:4px;">
+            {% for t in technologies %}
+            <span class="chip chip-orange" style="font-size:12.5px; padding:5px 14px;">{{ t }}</span>
+            {% endfor %}
+        </div>
+        {% else %}
+        <div style="color:var(--text3); font-size:13px;">Žádné technologie</div>
+        {% endif %}
+    </div>
+
+    <!-- Manuály -->
+    {% if mach_files %}
+    <div class="detail-section">
+        <div class="detail-section-title">Dokumentace / Manuály</div>
+        {% for path in mach_files %}
+        <div class="file-item">
+            <a class="file-link" href="{{ url_for('uploaded_file', filename=path) }}" target="_blank">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14,2 14,8 20,8"/></svg>
+                {{ path.split('/')[-1] }}
+            </a>
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+
+    <!-- Díly na tomto zařízení -->
+    {% if parts %}
+    <div class="detail-section full">
+        <div class="detail-section-title">Díly zpracovávané na tomto zařízení <span class="panel-count">{{ parts|length }}</span></div>
+        <table class="tab">
+            <thead>
+                <tr>
+                    <th>Název dílu</th>
+                    <th>Index</th>
+                    <th>Zákazník</th>
+                    <th>SAP Nr.</th>
+                    <th>Výkres Nr.</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for p in parts %}
+                <tr onclick="window.location='{{ url_for('parts_detail', id=p.id) }}'" style="cursor:pointer;">
+                    <td class="td-name">{{ p.name_part }}</td>
+                    <td class="td-mono">{{ p.part_index or '—' }}</td>
+                    <td class="td-sub">{{ p.customer or '—' }}</td>
+                    <td class="td-mono">{{ p.SAP_code or '—' }}</td>
+                    <td class="td-mono">{{ p.Drawing_number or '—' }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% endif %}
+
+</div>
+{% endblock %}

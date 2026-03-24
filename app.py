@@ -71,6 +71,8 @@ def init_db():
             Temp_Karbonitridace_min INTEGER, Temp_Karbonitridace_max INTEGER,
             Hardness_min INTEGER, Hardness_max INTEGER,
             Hardness_Unit TEXT DEFAULT 'HRC',
+            Hardness_Nitridace_min INTEGER, Hardness_Nitridace_max INTEGER,
+            Hardness_Nitridace_Unit TEXT DEFAULT 'HV1',
             Note TEXT,
             pdf_path TEXT,
             pdf_paths TEXT
@@ -91,6 +93,8 @@ def init_db():
         CREATE TABLE IF NOT EXISTS Parts (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             name_part TEXT NOT NULL,
+            part_index TEXT,
+            customer TEXT,
             SAP_code TEXT,
             Drawing_number TEXT,
             Material_id INTEGER REFERENCES Materials(id),
@@ -139,6 +143,9 @@ def init_db():
         "ALTER TABLE Materials ADD COLUMN Temp_Nitridace_max INTEGER",
         "ALTER TABLE Materials ADD COLUMN Temp_Karbonitridace_min INTEGER",
         "ALTER TABLE Materials ADD COLUMN Temp_Karbonitridace_max INTEGER",
+        "ALTER TABLE Materials ADD COLUMN Hardness_Nitridace_min INTEGER",
+        "ALTER TABLE Materials ADD COLUMN Hardness_Nitridace_max INTEGER",
+        "ALTER TABLE Materials ADD COLUMN Hardness_Nitridace_Unit TEXT DEFAULT 'HV1'",
         "ALTER TABLE Machines ADD COLUMN manual_path TEXT",
         "ALTER TABLE Machines ADD COLUMN manual_paths TEXT",
         "ALTER TABLE Parts ADD COLUMN weight_g REAL",
@@ -147,6 +154,8 @@ def init_db():
         "ALTER TABLE Parts ADD COLUMN EHT_min REAL",
         "ALTER TABLE Parts ADD COLUMN EHT_max REAL",
         "ALTER TABLE Parts ADD COLUMN Soft_Points TEXT",
+        "ALTER TABLE Parts ADD COLUMN part_index TEXT",
+        "ALTER TABLE Parts ADD COLUMN customer TEXT",
     ]:
         try:
             db.execute(sql)
@@ -176,8 +185,9 @@ def Parts():
             LEFT JOIN Materials m ON d.Material_id = m.id
             LEFT JOIN Machines ma ON d.Machine_id = ma.id
             WHERE d.name_part LIKE ? OR d.SAP_code LIKE ? OR d.Drawing_number LIKE ?
+               OR d.customer LIKE ? OR d.part_index LIKE ?
             ORDER BY d.name_part
-        ''', (f'%{search}%', f'%{search}%', f'%{search}%')).fetchall()
+        ''', (f'%{search}%', f'%{search}%', f'%{search}%', f'%{search}%', f'%{search}%')).fetchall()
     else:
         parts = db.execute('''
             SELECT d.*, m.name AS material_name, ma.name AS machine_name
@@ -248,7 +258,8 @@ def parts_form(id=None):
                 calculation = existing['calculation_path']
             db.execute('''
                 UPDATE Parts SET
-                    name_part=?, SAP_code=?, Drawing_number=?,
+                    name_part=?, part_index=?, customer=?,
+                    SAP_code=?, Drawing_number=?,
                     Material_id=?, Machine_id=?,
                     diameter=?, length=?, width=?, height=?, weight_g=?,
                     annual_volume_pcs=?, batch_size_pcs=?,
@@ -263,7 +274,8 @@ def parts_form(id=None):
                     drawing_path=?, calculation_path=?,
                     upraveno=datetime('now')
                 WHERE id=?
-            ''', (name_part, s('SAP_code'), s('Drawing_number'),
+            ''', (name_part, s('part_index'), s('customer'),
+                  s('SAP_code'), s('Drawing_number'),
                   n('Material_id'), n('Machine_id'),
                   n('diameter'), n('length'), n('width'), n('height'), n('weight_g'),
                   n('annual_volume_pcs'), n('batch_size_pcs'),
@@ -279,7 +291,8 @@ def parts_form(id=None):
         else:
             db.execute('''
                 INSERT INTO Parts (
-                    name_part, SAP_code, Drawing_number,
+                    name_part, part_index, customer,
+                    SAP_code, Drawing_number,
                     Material_id, Machine_id,
                     diameter, length, width, height, weight_g,
                     annual_volume_pcs, batch_size_pcs,
@@ -292,8 +305,9 @@ def parts_form(id=None):
                     NHD_min, NHD_max, Porosity_max, Soft_Points,
                     HT_Specifications, Note,
                     drawing_path, calculation_path
-                ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
-            ''', (name_part, s('SAP_code'), s('Drawing_number'),
+                ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+            ''', (name_part, s('part_index'), s('customer'),
+                  s('SAP_code'), s('Drawing_number'),
                   n('Material_id'), n('Machine_id'),
                   n('diameter'), n('length'), n('width'), n('height'), n('weight_g'),
                   n('annual_volume_pcs'), n('batch_size_pcs'),
@@ -338,6 +352,25 @@ def materials():
     return render_template('materials.html', materials=mats, quantity=qty)
 
 
+@app.route('/Materials/<int:id>')
+def material_detail(id):
+    db = get_db()
+    material = db.execute('SELECT * FROM Materials WHERE id=?', (id,)).fetchone()
+    if not material:
+        return 'Material not found', 404
+    mat_pdfs = []
+    if material['pdf_paths']:
+        mat_pdfs = json.loads(material['pdf_paths'])
+    elif material['pdf_path']:
+        mat_pdfs = [material['pdf_path']]
+    parts = db.execute('''
+        SELECT id, name_part, SAP_code, Drawing_number, customer, part_index
+        FROM Parts WHERE Material_id = ? ORDER BY name_part
+    ''', (id,)).fetchall()
+    db.close()
+    return render_template('material_detail.html', material=material, mat_pdfs=mat_pdfs, parts=parts)
+
+
 @app.route('/api/materials/search')
 def materials_search():
     q = request.args.get('q', '')
@@ -366,7 +399,6 @@ def material_form(id=None):
             existing = db.execute('SELECT pdf_path, pdf_paths FROM Materials WHERE id=?', (id,)).fetchone()
             if existing:
                 existing_paths = json.loads(existing['pdf_paths'] or '[]') if existing['pdf_paths'] else []
-                # migrate old single pdf_path
                 if existing['pdf_path'] and existing['pdf_path'] not in existing_paths:
                     existing_paths.append(existing['pdf_path'])
             else:
@@ -390,6 +422,7 @@ def material_form(id=None):
                     Temp_Nitridace_min=?, Temp_Nitridace_max=?,
                     Temp_Karbonitridace_min=?, Temp_Karbonitridace_max=?,
                     Hardness_min=?, Hardness_max=?, Hardness_Unit=?,
+                    Hardness_Nitridace_min=?, Hardness_Nitridace_max=?, Hardness_Nitridace_Unit=?,
                     Note=?, pdf_paths=?
                 WHERE id=?
             ''', (g('name'), g('norm'), g('type'),
@@ -406,6 +439,7 @@ def material_form(id=None):
                   n('Temp_Nitridace_min'), n('Temp_Nitridace_max'),
                   n('Temp_Karbonitridace_min'), n('Temp_Karbonitridace_max'),
                   n('Hardness_min'), n('Hardness_max'), g('Hardness_Unit') or 'HRC',
+                  n('Hardness_Nitridace_min'), n('Hardness_Nitridace_max'), g('Hardness_Nitridace_Unit') or 'HV1',
                   g('Note'), pdf_paths_json, id))
         else:
             pdf_paths_json = json.dumps(new_paths)
@@ -425,8 +459,9 @@ def material_form(id=None):
                     Temp_Nitridace_min, Temp_Nitridace_max,
                     Temp_Karbonitridace_min, Temp_Karbonitridace_max,
                     Hardness_min, Hardness_max, Hardness_Unit,
+                    Hardness_Nitridace_min, Hardness_Nitridace_max, Hardness_Nitridace_Unit,
                     Note, pdf_paths
-                ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+                ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
             ''', (g('name'), g('norm'), g('type'),
                   n('C_min'), n('C_max'), n('Si_min'), n('Si_max'),
                   n('Mn_min'), n('Mn_max'), n('P_min'), n('P_max'),
@@ -441,13 +476,13 @@ def material_form(id=None):
                   n('Temp_Nitridace_min'), n('Temp_Nitridace_max'),
                   n('Temp_Karbonitridace_min'), n('Temp_Karbonitridace_max'),
                   n('Hardness_min'), n('Hardness_max'), g('Hardness_Unit') or 'HRC',
+                  n('Hardness_Nitridace_min'), n('Hardness_Nitridace_max'), g('Hardness_Nitridace_Unit') or 'HV1',
                   g('Note'), pdf_paths_json))
         db.commit()
         db.close()
         return redirect(url_for('materials'))
 
     material = db.execute('SELECT * FROM Materials WHERE id=?', (id,)).fetchone() if id else None
-    # Build list of pdf paths for template
     mat_pdfs = []
     if material:
         if material['pdf_paths']:
@@ -487,12 +522,46 @@ def delete_material(id):
 @app.route('/machines')
 def machines():
     db = get_db()
-    machs = db.execute('SELECT * FROM Machines ORDER BY name').fetchall()
+    machs_raw = db.execute('SELECT * FROM Machines ORDER BY name').fetchall()
+    machs = []
+    for m in machs_raw:
+        d = dict(m)
+        try:
+            d['technologies'] = json.loads(m['technology']) if m['technology'] else []
+        except Exception:
+            d['technologies'] = [m['technology']] if m['technology'] else []
+        machs.append(d)
     qty = {r['mid']: r['cnt'] for r in db.execute(
         'SELECT Machine_id AS mid, COUNT(*) AS cnt FROM Parts WHERE Machine_id IS NOT NULL GROUP BY Machine_id'
     ).fetchall()}
     db.close()
     return render_template('machines.html', machines=machs, quantity=qty)
+
+
+@app.route('/machines/<int:id>')
+def machine_detail(id):
+    db = get_db()
+    machine = db.execute('SELECT * FROM Machines WHERE id=?', (id,)).fetchone()
+    if not machine:
+        return 'Machine not found', 404
+    technologies = []
+    if machine['technology']:
+        try:
+            technologies = json.loads(machine['technology'])
+        except Exception:
+            technologies = [machine['technology']]
+    mach_files = []
+    if machine['manual_paths']:
+        mach_files = json.loads(machine['manual_paths'])
+    elif machine['manual_path']:
+        mach_files = [machine['manual_path']]
+    parts = db.execute('''
+        SELECT id, name_part, SAP_code, Drawing_number, customer, part_index
+        FROM Parts WHERE Machine_id = ? ORDER BY name_part
+    ''', (id,)).fetchall()
+    db.close()
+    return render_template('machine_detail.html', machine=machine, technologies=technologies,
+                           mach_files=mach_files, parts=parts)
 
 
 @app.route('/machines/add', methods=['GET', 'POST'])
@@ -502,11 +571,9 @@ def machine_form(id=None):
     if request.method == 'POST':
         f = request.form
 
-        # Multiple technologies stored as JSON
         techs = f.getlist('technology')
         technology_json = json.dumps(techs) if techs else None
 
-        # Multiple files
         new_manual_files = request.files.getlist('manual_files')
         new_paths = save_files(new_manual_files, 'machines')
 
@@ -542,7 +609,6 @@ def machine_form(id=None):
         return redirect(url_for('machines'))
 
     machine = db.execute('SELECT * FROM Machines WHERE id=?', (id,)).fetchone() if id else None
-    # Build lists for template
     mach_techs = []
     mach_files = []
     if machine:

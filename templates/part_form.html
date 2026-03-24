@@ -28,6 +28,16 @@
                            placeholder="Název dílu" required>
                 </label>
                 <label class="label">
+                    Index dílu
+                    <input type="text" name="part_index" value="{{ part.part_index if part and part.part_index else '' }}"
+                           placeholder="např. A, B, 01…">
+                </label>
+                <label class="label">
+                    Zákazník
+                    <input type="text" name="customer" value="{{ part.customer if part and part.customer else '' }}"
+                           placeholder="Název zákazníka">
+                </label>
+                <label class="label">
                     SAP Nr.
                     <input type="text" name="SAP_code" value="{{ part.SAP_code if part else '' }}"
                            placeholder="např. 1234567890">
