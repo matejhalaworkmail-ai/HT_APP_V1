@@ -12,7 +12,7 @@
     <div class="page-title">{% if id %}Upravit díl{% else %}Přidat nový díl{% endif %}</div>
 
     {% if error %}
-    <div class="alert-error">⚠ {{ error }}</div>
+    <div class="alert-error">{{ error }}</div>
     {% endif %}
 
     <form method="post" enctype="multipart/form-data"
@@ -53,7 +53,6 @@
                                value="{{ part.material_name if part and part.material_name is defined and part.material_name else '' }}">
                         <div class="autocomplete-list" id="material_list"></div>
                     </div>
-                    <!-- Hidden select keeps the actual ID for form submission -->
                     <select name="Material_id" id="material_id_select"
                             style="margin-top:8px; font-size:12px; color:var(--text3);">
                         <option value="">— žádný materiál —</option>
@@ -68,7 +67,7 @@
             </div>
             <div style="margin-top:10px; font-size:12px; color:var(--text3);">
                 Materiál není v seznamu?
-                <a href="{{ url_for('material_form') }}" target="_blank" style="color:var(--orange); text-decoration:none;">
+                <a href="{{ url_for('material_form') }}" target="_blank" style="color:var(--accent); text-decoration:none;">
                     + Přidat nový materiál
                 </a>
             </div>
@@ -93,7 +92,7 @@
             </div>
             <div style="margin-top:10px; font-size:12px; color:var(--text3);">
                 Zařízení není v seznamu?
-                <a href="{{ url_for('machine_form') }}" target="_blank" style="color:var(--orange); text-decoration:none;">
+                <a href="{{ url_for('machine_form') }}" target="_blank" style="color:var(--accent); text-decoration:none;">
                     + Přidat nové zařízení
                 </a>
             </div>
@@ -155,23 +154,22 @@
             <div class="form-grid">
                 <label class="label col-span-2">
                     Technologie
-                    <select name="HT_technology">
+                    <select name="HT_technology" id="ht_technology_select" onchange="updateCaseDepthFields()">
                         <option value="">— vyberte technologii —</option>
-                        {% for tech in ['Kalení', 'Cementování', 'Nitridování', 'Nitrokarburování',
-                                        'Kalení + Popouštění', 'Cementování + Kalení', 'Žíhání',
-                                        'Normalizační žíhání', 'Indukční kalení'] %}
+                        {% for tech in ['Kalení', 'Cementování', 'Nitridování', 'Karbonitridace',
+                                        'Nitrocementace', 'Kalení + Popouštění',
+                                        'Žíhání', 'Normalizační žíhání', 'Indukční kalení'] %}
                         <option value="{{ tech }}"
                             {% if part and part.HT_technology == tech %}selected{% endif %}>{{ tech }}</option>
                         {% endfor %}
                         <option value="Jiné"
                             {% if part and part.HT_technology and part.HT_technology not in
-                              ['Kalení','Cementování','Nitridování','Nitrokarburování',
-                               'Kalení + Popouštění','Cementování + Kalení','Žíhání',
-                               'Normalizační žíhání','Indukční kalení'] %}selected{% endif %}>Jiné</option>
+                              ['Kalení','Cementování','Nitridování','Karbonitridace','Nitrocementace',
+                               'Kalení + Popouštění','Žíhání','Normalizační žíhání','Indukční kalení'] %}selected{% endif %}>Jiné</option>
                     </select>
                 </label>
                 <label class="label">
-                    Teplota kalení (°C)
+                    Teplota (°C)
                     <input type="number" name="HT_temperature"
                            value="{{ part.HT_temperature if part and part.HT_temperature else '' }}"
                            placeholder="850">
@@ -183,7 +181,7 @@
                            placeholder="200">
                 </label>
                 <label class="label">
-                    Čas kalení (min)
+                    Čas (min)
                     <input type="number" name="HT_time"
                            value="{{ part.HT_time if part and part.HT_time else '' }}"
                            placeholder="60">
@@ -203,40 +201,40 @@
             <div class="form-grid-3">
                 <label class="label">
                     Povrch min
-                    <input type="number" name="Surface_Hardness_min"
+                    <input type="number" step="0.1" name="Surface_Hardness_min"
                            value="{{ part.Surface_Hardness_min if part and part.Surface_Hardness_min else '' }}"
                            placeholder="58">
                 </label>
                 <label class="label">
                     Povrch max
-                    <input type="number" name="Surface_Hardness_max"
+                    <input type="number" step="0.1" name="Surface_Hardness_max"
                            value="{{ part.Surface_Hardness_max if part and part.Surface_Hardness_max else '' }}"
                            placeholder="64">
                 </label>
                 <label class="label">
                     Jednotka
                     <select name="Surface_Hardness_Unit">
-                        {% for u in ['HRC','HV','HB','HRA'] %}
+                        {% for u in ['HRC','HB','HRA','HV0,1','HV0,3','HV0,5','HV1','HV5','HV10'] %}
                         <option value="{{ u }}" {% if part and part.Surface_Hardness_Unit == u %}selected{% elif not part and u == 'HRC' %}selected{% endif %}>{{ u }}</option>
                         {% endfor %}
                     </select>
                 </label>
                 <label class="label">
                     Jádro min
-                    <input type="number" name="Core_Hardness_min"
+                    <input type="number" step="0.1" name="Core_Hardness_min"
                            value="{{ part.Core_Hardness_min if part and part.Core_Hardness_min else '' }}"
                            placeholder="35">
                 </label>
                 <label class="label">
                     Jádro max
-                    <input type="number" name="Core_Hardness_max"
+                    <input type="number" step="0.1" name="Core_Hardness_max"
                            value="{{ part.Core_Hardness_max if part and part.Core_Hardness_max else '' }}"
                            placeholder="45">
                 </label>
                 <label class="label">
                     Jednotka
                     <select name="Core_Hardness_Unit">
-                        {% for u in ['HRC','HV','HB','HRA'] %}
+                        {% for u in ['HRC','HB','HRA','HV0,1','HV0,3','HV0,5','HV1','HV5','HV10'] %}
                         <option value="{{ u }}" {% if part and part.Core_Hardness_Unit == u %}selected{% elif not part and u == 'HRC' %}selected{% endif %}>{{ u }}</option>
                         {% endfor %}
                     </select>
@@ -245,18 +243,43 @@
         </div>
 
         <!-- ── Cementace / Nitridace ────────────────────────── -->
-        <div class="form-section">
-            <div class="form-section-title">Cementace / Nitridace (volitelné)</div>
-            <div class="form-grid-3">
-                <label class="label">CHD min (mm)<input type="number" step="0.01" name="CHD_min" value="{{ part.CHD_min if part and part.CHD_min else '' }}" placeholder="0.00"></label>
-                <label class="label">CHD max (mm)<input type="number" step="0.01" name="CHD_max" value="{{ part.CHD_max if part and part.CHD_max else '' }}" placeholder="0.00"></label>
-                <div></div>
-                <label class="label">CLT min (mm)<input type="number" step="0.01" name="CLT_min" value="{{ part.CLT_min if part and part.CLT_min else '' }}" placeholder="0.00"></label>
-                <label class="label">CLT max (mm)<input type="number" step="0.01" name="CLT_max" value="{{ part.CLT_max if part and part.CLT_max else '' }}" placeholder="0.00"></label>
-                <div></div>
-                <label class="label">NHD min (mm)<input type="number" step="0.01" name="NHD_min" value="{{ part.NHD_min if part and part.NHD_min else '' }}" placeholder="0.00"></label>
-                <label class="label">NHD max (mm)<input type="number" step="0.01" name="NHD_max" value="{{ part.NHD_max if part and part.NHD_max else '' }}" placeholder="0.00"></label>
-                <label class="label">Pórovitost max (mm)<input type="number" step="0.01" name="Porosity_max" value="{{ part.Porosity_max if part and part.Porosity_max else '' }}" placeholder="0.00"></label>
+        <div class="form-section" id="case_depth_section">
+            <div class="form-section-title" id="case_depth_title">Cementace / Nitridace (volitelné)</div>
+
+            <!-- Cementace / Nitrocementace fields -->
+            <div id="fields_cementace" style="display:none;">
+                <div class="form-grid-3">
+                    <label class="label">CHD min (mm)<input type="number" step="0.01" name="CHD_min" value="{{ part.CHD_min if part and part.CHD_min else '' }}" placeholder="0.00"></label>
+                    <label class="label">CHD max (mm)<input type="number" step="0.01" name="CHD_max" value="{{ part.CHD_max if part and part.CHD_max else '' }}" placeholder="0.00"></label>
+                    <div></div>
+                    <label class="label">EHT min (mm)<input type="number" step="0.01" name="EHT_min" value="{{ part.EHT_min if part and part.EHT_min else '' }}" placeholder="0.00"></label>
+                    <label class="label">EHT max (mm)<input type="number" step="0.01" name="EHT_max" value="{{ part.EHT_max if part and part.EHT_max else '' }}" placeholder="0.00"></label>
+                    <div></div>
+                </div>
+            </div>
+
+            <!-- Nitridace / Karbonitridace fields -->
+            <div id="fields_nitridace" style="display:none;">
+                <div class="form-grid-3">
+                    <label class="label">CLT min (µm)<input type="number" step="1" name="CLT_min" value="{{ part.CLT_min if part and part.CLT_min else '' }}" placeholder="0"></label>
+                    <label class="label">CLT max (µm)<input type="number" step="1" name="CLT_max" value="{{ part.CLT_max if part and part.CLT_max else '' }}" placeholder="0"></label>
+                    <div></div>
+                    <label class="label">NHD min (mm)<input type="number" step="0.01" name="NHD_min" value="{{ part.NHD_min if part and part.NHD_min else '' }}" placeholder="0.00"></label>
+                    <label class="label">NHD max (mm)<input type="number" step="0.01" name="NHD_max" value="{{ part.NHD_max if part and part.NHD_max else '' }}" placeholder="0.00"></label>
+                    <div></div>
+                    <label class="label">Pórovitost max (%)<input type="number" step="0.1" name="Porosity_max" value="{{ part.Porosity_max if part and part.Porosity_max else '' }}" placeholder="0.0"></label>
+                    <label class="label col-span-2">
+                        Soft Points
+                        <input type="text" name="Soft_Points" value="{{ part.Soft_Points if part and part.Soft_Points else '' }}" placeholder="popis soft points…">
+                    </label>
+                </div>
+            </div>
+
+            <!-- Default (no specific tech selected) -->
+            <div id="fields_default">
+                <div style="color: var(--text3); font-size: 13px; padding: 8px 0;">
+                    Vyberte technologii pro zobrazení specifických polí (Cementace/Nitrocementace → CHD, EHT | Nitridace/Karbonitridace → CLT [µm], NHD, Pórovitost, Soft Points).
+                </div>
             </div>
         </div>
 
@@ -303,7 +326,7 @@
         <div class="form-actions">
             <a href="{{ url_for('Parts') }}" class="btn btn-ghost">Zrušit</a>
             <button type="submit" class="btn btn-primary">
-                {% if id %}💾 Uložit změny{% else %}+ Přidat díl{% endif %}
+                {% if id %}Uložit změny{% else %}+ Přidat díl{% endif %}
             </button>
         </div>
     </form>
@@ -334,7 +357,6 @@ searchInput.addEventListener('input', function() {
                     div.addEventListener('mousedown', function(e) {
                         e.preventDefault();
                         searchInput.value = item.name;
-                        // sync the select
                         for (let opt of selectEl.options) {
                             if (opt.value == item.id) { opt.selected = true; break; }
                         }
@@ -355,10 +377,41 @@ searchInput.addEventListener('focus', function() {
     if (this.value.trim()) this.dispatchEvent(new Event('input'));
 });
 
-/* sync text input when select changes */
 selectEl.addEventListener('change', function() {
     const opt = this.options[this.selectedIndex];
     searchInput.value = opt.value ? opt.text : '';
 });
+
+/* ── Conditional case depth fields ── */
+const CEMENTACE_TECHS = ['Cementování', 'Nitrocementace'];
+const NITRIDACE_TECHS = ['Nitridování', 'Karbonitridace'];
+
+function updateCaseDepthFields() {
+    const tech = document.getElementById('ht_technology_select').value;
+    const fc = document.getElementById('fields_cementace');
+    const fn = document.getElementById('fields_nitridace');
+    const fd = document.getElementById('fields_default');
+    const title = document.getElementById('case_depth_title');
+
+    if (CEMENTACE_TECHS.includes(tech)) {
+        fc.style.display = 'block';
+        fn.style.display = 'none';
+        fd.style.display = 'none';
+        title.textContent = tech + ' — hloubky';
+    } else if (NITRIDACE_TECHS.includes(tech)) {
+        fc.style.display = 'none';
+        fn.style.display = 'block';
+        fd.style.display = 'none';
+        title.textContent = tech + ' — parametry';
+    } else {
+        fc.style.display = 'none';
+        fn.style.display = 'none';
+        fd.style.display = 'block';
+        title.textContent = 'Cementace / Nitridace (volitelné)';
+    }
+}
+
+// Init on page load
+updateCaseDepthFields();
 </script>
 {% endblock %}

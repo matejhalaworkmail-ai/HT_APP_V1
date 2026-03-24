@@ -75,7 +75,7 @@
 
         <!-- ── Tepelné zpracování ─────────────────────────── -->
         <div class="form-section">
-            <div class="form-section-title">Doporučené tepelné zpracování</div>
+            <div class="form-section-title">Doporučené tepelné zpracování — Kalení / Popouštění</div>
             <div class="form-grid">
                 <label class="label">
                     Kalení (olej) min (°C)
@@ -116,6 +116,61 @@
             </div>
         </div>
 
+        <!-- ── Doporučené teploty procesů ────────────────── -->
+        <div class="form-section">
+            <div class="form-section-title">Doporučené teploty procesů</div>
+            <div class="form-grid">
+                <label class="label">
+                    Cementace min (°C)
+                    <input type="number" name="Temp_Cementace_min"
+                           value="{{ material.Temp_Cementace_min if material and material.Temp_Cementace_min else '' }}"
+                           placeholder="880">
+                </label>
+                <label class="label">
+                    Cementace max (°C)
+                    <input type="number" name="Temp_Cementace_max"
+                           value="{{ material.Temp_Cementace_max if material and material.Temp_Cementace_max else '' }}"
+                           placeholder="950">
+                </label>
+                <label class="label">
+                    Nitrocementace min (°C)
+                    <input type="number" name="Temp_Nitrocementace_min"
+                           value="{{ material.Temp_Nitrocementace_min if material and material.Temp_Nitrocementace_min else '' }}"
+                           placeholder="820">
+                </label>
+                <label class="label">
+                    Nitrocementace max (°C)
+                    <input type="number" name="Temp_Nitrocementace_max"
+                           value="{{ material.Temp_Nitrocementace_max if material and material.Temp_Nitrocementace_max else '' }}"
+                           placeholder="880">
+                </label>
+                <label class="label">
+                    Nitridace min (°C)
+                    <input type="number" name="Temp_Nitridace_min"
+                           value="{{ material.Temp_Nitridace_min if material and material.Temp_Nitridace_min else '' }}"
+                           placeholder="480">
+                </label>
+                <label class="label">
+                    Nitridace max (°C)
+                    <input type="number" name="Temp_Nitridace_max"
+                           value="{{ material.Temp_Nitridace_max if material and material.Temp_Nitridace_max else '' }}"
+                           placeholder="540">
+                </label>
+                <label class="label">
+                    Karbonitridace min (°C)
+                    <input type="number" name="Temp_Karbonitridace_min"
+                           value="{{ material.Temp_Karbonitridace_min if material and material.Temp_Karbonitridace_min else '' }}"
+                           placeholder="550">
+                </label>
+                <label class="label">
+                    Karbonitridace max (°C)
+                    <input type="number" name="Temp_Karbonitridace_max"
+                           value="{{ material.Temp_Karbonitridace_max if material and material.Temp_Karbonitridace_max else '' }}"
+                           placeholder="600">
+                </label>
+            </div>
+        </div>
+
         <!-- ── Tvrdost po kalení ──────────────────────────── -->
         <div class="form-section">
             <div class="form-section-title">Tvrdost po kalení</div>
@@ -135,7 +190,7 @@
                 <label class="label">
                     Jednotka
                     <select name="Hardness_Unit">
-                        {% for u in ['HRC','HV','HB','HRA'] %}
+                        {% for u in ['HRC','HB','HRA','HV0,1','HV0,3','HV0,5','HV1','HV5','HV10'] %}
                         <option value="{{ u }}" {% if material and material.Hardness_Unit == u %}selected{% elif not material and u == 'HRC' %}selected{% endif %}>{{ u }}</option>
                         {% endfor %}
                     </select>
@@ -143,28 +198,43 @@
             </div>
         </div>
 
-        <!-- ── Materiálový list ───────────────────────────── -->
+        <!-- ── Materiálové listy (PDF) ────────────────────── -->
         <div class="form-section">
-            <div class="form-section-title">Materiálový list (PDF)</div>
-            <label class="label">
-                Nahrát PDF
-                <input type="file" name="pdf_file" accept=".pdf">
-            </label>
-            {% if material and material.pdf_path %}
-            <div style="margin-top:10px; font-size:13px;">
-                Aktuální soubor:
-                <a class="file-link" href="{{ url_for('uploaded_file', filename=material.pdf_path) }}" target="_blank">
-                    📄 {{ material.pdf_path.split('/')[-1] }}
-                </a>
-                <span style="color:var(--text3); font-size:12px; margin-left:8px;">(nahrátím nového souboru nahradíte stávající)</span>
+            <div class="form-section-title">Materiálové listy (PDF)</div>
+
+            {% if mat_pdfs %}
+            <div style="margin-bottom:14px;">
+                <div style="font-size:11px; color:var(--text3); text-transform:uppercase; letter-spacing:1px; margin-bottom:8px;">Nahrané soubory</div>
+                {% for path in mat_pdfs %}
+                <div class="file-item">
+                    <a class="file-link" href="{{ url_for('uploaded_file', filename=path) }}" target="_blank">
+                        📄 {{ path.split('/')[-1] }}
+                    </a>
+                    {% if id %}
+                    <form method="post" action="{{ url_for('delete_material_pdf') }}" style="display:inline; margin-left:12px;">
+                        <input type="hidden" name="mat_id" value="{{ id }}">
+                        <input type="hidden" name="path" value="{{ path }}">
+                        <button type="submit" class="btn btn-danger btn-sm" onclick="return confirm('Smazat soubor?')">× Smazat</button>
+                    </form>
+                    {% endif %}
+                </div>
+                {% endfor %}
             </div>
             {% endif %}
+
+            <label class="label">
+                Přidat PDF soubory (lze vybrat více najednou)
+                <input type="file" name="pdf_files" accept=".pdf" multiple>
+            </label>
+            <div style="margin-top:6px; font-size:12px; color:var(--text3);">
+                Podržte Ctrl (nebo Cmd na Mac) pro výběr více souborů.
+            </div>
         </div>
 
         <div class="form-actions">
             <a href="{{ url_for('materials') }}" class="btn btn-ghost">Zrušit</a>
             <button type="submit" class="btn btn-primary">
-                {% if id %}💾 Uložit změny{% else %}+ Přidat materiál{% endif %}
+                {% if id %}Uložit změny{% else %}+ Přidat materiál{% endif %}
             </button>
         </div>
     </form>

@@ -24,26 +24,31 @@
                            value="{{ machine.name if machine else '' }}"
                            placeholder="např. Pec KS-500, Kadicí stroj…">
                 </label>
-                <label class="label">
+                <label class="label col-span-2">
                     Typ zařízení
                     <select name="type">
                         <option value="">— vyberte typ —</option>
                         {% for t in ['Komorová pec', 'Průběžná pec', 'Vakuová pec', 'Solná lázeň',
-                                     'Indukční zařízení', 'Nitridační pec', 'Popouštěcí pec', 'Jiné'] %}
+                                     'Indukční zařízení', 'Popouštěcí pec', 'Jiné'] %}
                         <option value="{{ t }}" {% if machine and machine.type == t %}selected{% endif %}>{{ t }}</option>
                         {% endfor %}
                     </select>
                 </label>
-                <label class="label">
-                    Technologie
-                    <select name="technology">
-                        <option value="">— vyberte technologii —</option>
-                        {% for t in ['Kalení', 'Cementování', 'Nitridování', 'Nitrokarburování',
-                                     'Žíhání', 'Popouštění', 'Indukční kalení', 'Univerzální'] %}
-                        <option value="{{ t }}" {% if machine and machine.technology == t %}selected{% endif %}>{{ t }}</option>
-                        {% endfor %}
-                    </select>
+            </div>
+        </div>
+
+        <!-- ── Technologie (multi-select) ────────────────── -->
+        <div class="form-section">
+            <div class="form-section-title">Technologie (lze vybrat více)</div>
+            <div class="multicheck-grid">
+                {% for t in ['Kalení', 'Cementování', 'Nitridování', 'Karbonitridace',
+                             'Nitrocementace', 'Žíhání', 'Popouštění', 'Indukční kalení', 'Univerzální'] %}
+                <label class="checkbox-label">
+                    <input type="checkbox" name="technology" value="{{ t }}"
+                           {% if mach_techs and t in mach_techs %}checked{% endif %}>
+                    {{ t }}
                 </label>
+                {% endfor %}
             </div>
         </div>
 
@@ -73,28 +78,43 @@
             </div>
         </div>
 
-        <!-- ── Manuál ─────────────────────────────────────── -->
+        <!-- ── Dokumentace ────────────────────────────────── -->
         <div class="form-section">
-            <div class="form-section-title">Dokumentace / Manuál (PDF)</div>
-            <label class="label">
-                Nahrát manuál
-                <input type="file" name="manual_file" accept=".pdf,.doc,.docx">
-            </label>
-            {% if machine and machine.manual_path %}
-            <div style="margin-top:10px; font-size:13px;">
-                Aktuální soubor:
-                <a class="file-link" href="{{ url_for('uploaded_file', filename=machine.manual_path) }}" target="_blank">
-                    📄 {{ machine.manual_path.split('/')[-1] }}
-                </a>
-                <span style="color:var(--text3); font-size:12px; margin-left:8px;">(nahrátím nového souboru nahradíte stávající)</span>
+            <div class="form-section-title">Dokumentace / Manuály (PDF)</div>
+
+            {% if mach_files %}
+            <div style="margin-bottom:14px;">
+                <div style="font-size:11px; color:var(--text3); text-transform:uppercase; letter-spacing:1px; margin-bottom:8px;">Nahrané soubory</div>
+                {% for path in mach_files %}
+                <div class="file-item">
+                    <a class="file-link" href="{{ url_for('uploaded_file', filename=path) }}" target="_blank">
+                        📄 {{ path.split('/')[-1] }}
+                    </a>
+                    {% if id %}
+                    <form method="post" action="{{ url_for('delete_machine_file') }}" style="display:inline; margin-left:12px;">
+                        <input type="hidden" name="mach_id" value="{{ id }}">
+                        <input type="hidden" name="path" value="{{ path }}">
+                        <button type="submit" class="btn btn-danger btn-sm" onclick="return confirm('Smazat soubor?')">× Smazat</button>
+                    </form>
+                    {% endif %}
+                </div>
+                {% endfor %}
             </div>
             {% endif %}
+
+            <label class="label">
+                Přidat soubory (lze vybrat více najednou)
+                <input type="file" name="manual_files" accept=".pdf,.doc,.docx" multiple>
+            </label>
+            <div style="margin-top:6px; font-size:12px; color:var(--text3);">
+                Podržte Ctrl (nebo Cmd na Mac) pro výběr více souborů.
+            </div>
         </div>
 
         <div class="form-actions">
             <a href="{{ url_for('machines') }}" class="btn btn-ghost">Zrušit</a>
             <button type="submit" class="btn btn-primary">
-                {% if id %}💾 Uložit změny{% else %}+ Přidat zařízení{% endif %}
+                {% if id %}Uložit změny{% else %}+ Přidat zařízení{% endif %}
             </button>
         </div>
     </form>
