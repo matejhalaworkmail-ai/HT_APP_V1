@@ -3,6 +3,7 @@ from flask import Flask, render_template, request, redirect, url_for, send_from_
 from werkzeug.utils import secure_filename
 import sqlite3
 import os
+import json
 
 app = Flask(__name__)
 DB = os.path.join(os.path.dirname(__file__), 'tz-databaze.db')
@@ -32,6 +33,16 @@ def save_file(file, subfolder):
     return None
 
 
+def save_files(files_list, subfolder):
+    """Save multiple uploaded files, return list of relative paths."""
+    paths = []
+    for file in files_list:
+        path = save_file(file, subfolder)
+        if path:
+            paths.append(path)
+    return paths
+
+
 def init_db():
     os.makedirs(UPLOAD_FOLDER, exist_ok=True)
     db = get_db()
@@ -54,10 +65,15 @@ def init_db():
             Hardening_Temp_Oil_min INTEGER, Hardening_Temp_Oil_max INTEGER,
             Hardening_Temp_Water_min INTEGER, Hardening_Temp_Water_max INTEGER,
             Tempering_Temp_min INTEGER, Tempering_Temp_max INTEGER,
+            Temp_Cementace_min INTEGER, Temp_Cementace_max INTEGER,
+            Temp_Nitrocementace_min INTEGER, Temp_Nitrocementace_max INTEGER,
+            Temp_Nitridace_min INTEGER, Temp_Nitridace_max INTEGER,
+            Temp_Karbonitridace_min INTEGER, Temp_Karbonitridace_max INTEGER,
             Hardness_min INTEGER, Hardness_max INTEGER,
             Hardness_Unit TEXT DEFAULT 'HRC',
             Note TEXT,
-            pdf_path TEXT
+            pdf_path TEXT,
+            pdf_paths TEXT
         );
 
         CREATE TABLE IF NOT EXISTS Machines (
@@ -68,7 +84,8 @@ def init_db():
             aktivni INTEGER DEFAULT 1,
             technology TEXT,
             Max_Load REAL,
-            manual_path TEXT
+            manual_path TEXT,
+            manual_paths TEXT
         );
 
         CREATE TABLE IF NOT EXISTS Parts (
@@ -97,9 +114,11 @@ def init_db():
             Core_Hardness_max INTEGER,
             Core_Hardness_Unit TEXT DEFAULT 'HRC',
             CHD_min REAL, CHD_max REAL,
+            EHT_min REAL, EHT_max REAL,
             CLT_min REAL, CLT_max REAL,
             NHD_min REAL, NHD_max REAL,
             Porosity_max REAL,
+            Soft_Points TEXT,
             HT_Specifications TEXT,
             Note TEXT,
             drawing_path TEXT,
@@ -111,10 +130,23 @@ def init_db():
     # Migrations for existing databases
     for sql in [
         "ALTER TABLE Materials ADD COLUMN pdf_path TEXT",
+        "ALTER TABLE Materials ADD COLUMN pdf_paths TEXT",
+        "ALTER TABLE Materials ADD COLUMN Temp_Cementace_min INTEGER",
+        "ALTER TABLE Materials ADD COLUMN Temp_Cementace_max INTEGER",
+        "ALTER TABLE Materials ADD COLUMN Temp_Nitrocementace_min INTEGER",
+        "ALTER TABLE Materials ADD COLUMN Temp_Nitrocementace_max INTEGER",
+        "ALTER TABLE Materials ADD COLUMN Temp_Nitridace_min INTEGER",
+        "ALTER TABLE Materials ADD COLUMN Temp_Nitridace_max INTEGER",
+        "ALTER TABLE Materials ADD COLUMN Temp_Karbonitridace_min INTEGER",
+        "ALTER TABLE Materials ADD COLUMN Temp_Karbonitridace_max INTEGER",
         "ALTER TABLE Machines ADD COLUMN manual_path TEXT",
+        "ALTER TABLE Machines ADD COLUMN manual_paths TEXT",
         "ALTER TABLE Parts ADD COLUMN weight_g REAL",
         "ALTER TABLE Parts ADD COLUMN drawing_path TEXT",
         "ALTER TABLE Parts ADD COLUMN calculation_path TEXT",
+        "ALTER TABLE Parts ADD COLUMN EHT_min REAL",
+        "ALTER TABLE Parts ADD COLUMN EHT_max REAL",
+        "ALTER TABLE Parts ADD COLUMN Soft_Points TEXT",
     ]:
         try:
             db.execute(sql)
@@ -172,9 +204,9 @@ def parts_detail(id):
                m.Hardening_Temp_Oil_min, m.Hardening_Temp_Oil_max,
                m.Hardening_Temp_Water_min, m.Hardening_Temp_Water_max,
                m.Tempering_Temp_min, m.Tempering_Temp_max,
-               m.pdf_path AS material_pdf,
+               m.pdf_path AS material_pdf, m.pdf_paths AS material_pdf_paths,
                ma.name AS machine_name, ma.type AS machine_type,
-               ma.manual_path AS machine_manual
+               ma.manual_path AS machine_manual, ma.manual_paths AS machine_manual_paths
         FROM Parts d
         LEFT JOIN Materials m ON d.Material_id = m.id
         LEFT JOIN Machines ma ON d.Machine_id = ma.id
@@ -224,8 +256,9 @@ def parts_form(id=None):
                     HT_time=?, Tempering_time=?,
                     Surface_Hardness_min=?, Surface_Hardness_max=?, Surface_Hardness_Unit=?,
                     Core_Hardness_min=?, Core_Hardness_max=?, Core_Hardness_Unit=?,
-                    CHD_min=?, CHD_max=?, CLT_min=?, CLT_max=?,
-                    NHD_min=?, NHD_max=?, Porosity_max=?,
+                    CHD_min=?, CHD_max=?, EHT_min=?, EHT_max=?,
+                    CLT_min=?, CLT_max=?,
+                    NHD_min=?, NHD_max=?, Porosity_max=?, Soft_Points=?,
                     HT_Specifications=?, Note=?,
                     drawing_path=?, calculation_path=?,
                     upraveno=datetime('now')
@@ -238,8 +271,9 @@ def parts_form(id=None):
                   n('HT_time'), n('Tempering_time'),
                   n('Surface_Hardness_min'), n('Surface_Hardness_max'), s('Surface_Hardness_Unit') or 'HRC',
                   n('Core_Hardness_min'), n('Core_Hardness_max'), s('Core_Hardness_Unit') or 'HRC',
-                  n('CHD_min'), n('CHD_max'), n('CLT_min'), n('CLT_max'),
-                  n('NHD_min'), n('NHD_max'), n('Porosity_max'),
+                  n('CHD_min'), n('CHD_max'), n('EHT_min'), n('EHT_max'),
+                  n('CLT_min'), n('CLT_max'),
+                  n('NHD_min'), n('NHD_max'), n('Porosity_max'), s('Soft_Points'),
                   s('HT_Specifications'), s('Note'),
                   drawing, calculation, id))
         else:
@@ -253,11 +287,12 @@ def parts_form(id=None):
                     HT_time, Tempering_time,
                     Surface_Hardness_min, Surface_Hardness_max, Surface_Hardness_Unit,
                     Core_Hardness_min, Core_Hardness_max, Core_Hardness_Unit,
-                    CHD_min, CHD_max, CLT_min, CLT_max,
-                    NHD_min, NHD_max, Porosity_max,
+                    CHD_min, CHD_max, EHT_min, EHT_max,
+                    CLT_min, CLT_max,
+                    NHD_min, NHD_max, Porosity_max, Soft_Points,
                     HT_Specifications, Note,
                     drawing_path, calculation_path
-                ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+                ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
             ''', (name_part, s('SAP_code'), s('Drawing_number'),
                   n('Material_id'), n('Machine_id'),
                   n('diameter'), n('length'), n('width'), n('height'), n('weight_g'),
@@ -266,8 +301,9 @@ def parts_form(id=None):
                   n('HT_time'), n('Tempering_time'),
                   n('Surface_Hardness_min'), n('Surface_Hardness_max'), s('Surface_Hardness_Unit') or 'HRC',
                   n('Core_Hardness_min'), n('Core_Hardness_max'), s('Core_Hardness_Unit') or 'HRC',
-                  n('CHD_min'), n('CHD_max'), n('CLT_min'), n('CLT_max'),
-                  n('NHD_min'), n('NHD_max'), n('Porosity_max'),
+                  n('CHD_min'), n('CHD_max'), n('EHT_min'), n('EHT_max'),
+                  n('CLT_min'), n('CLT_max'),
+                  n('NHD_min'), n('NHD_max'), n('Porosity_max'), s('Soft_Points'),
                   s('HT_Specifications'), s('Note'),
                   drawing, calculation))
         db.commit()
@@ -323,12 +359,21 @@ def material_form(id=None):
         def g(k): return f.get(k, '').strip() or None
         def n(k): return f.get(k) or None
 
-        pdf = save_file(request.files.get('pdf_file'), 'materials')
+        new_pdf_files = request.files.getlist('pdf_files')
+        new_paths = save_files(new_pdf_files, 'materials')
 
         if id:
-            existing = db.execute('SELECT pdf_path FROM Materials WHERE id=?', (id,)).fetchone()
-            if not pdf and existing:
-                pdf = existing['pdf_path']
+            existing = db.execute('SELECT pdf_path, pdf_paths FROM Materials WHERE id=?', (id,)).fetchone()
+            if existing:
+                existing_paths = json.loads(existing['pdf_paths'] or '[]') if existing['pdf_paths'] else []
+                # migrate old single pdf_path
+                if existing['pdf_path'] and existing['pdf_path'] not in existing_paths:
+                    existing_paths.append(existing['pdf_path'])
+            else:
+                existing_paths = []
+            combined = existing_paths + new_paths
+            pdf_paths_json = json.dumps(combined)
+
             db.execute('''
                 UPDATE Materials SET
                     name=?, norm=?, type=?,
@@ -340,8 +385,12 @@ def material_form(id=None):
                     Hardening_Temp_Oil_min=?, Hardening_Temp_Oil_max=?,
                     Hardening_Temp_Water_min=?, Hardening_Temp_Water_max=?,
                     Tempering_Temp_min=?, Tempering_Temp_max=?,
+                    Temp_Cementace_min=?, Temp_Cementace_max=?,
+                    Temp_Nitrocementace_min=?, Temp_Nitrocementace_max=?,
+                    Temp_Nitridace_min=?, Temp_Nitridace_max=?,
+                    Temp_Karbonitridace_min=?, Temp_Karbonitridace_max=?,
                     Hardness_min=?, Hardness_max=?, Hardness_Unit=?,
-                    Note=?, pdf_path=?
+                    Note=?, pdf_paths=?
                 WHERE id=?
             ''', (g('name'), g('norm'), g('type'),
                   n('C_min'), n('C_max'), n('Si_min'), n('Si_max'),
@@ -352,9 +401,14 @@ def material_form(id=None):
                   n('Hardening_Temp_Oil_min'), n('Hardening_Temp_Oil_max'),
                   n('Hardening_Temp_Water_min'), n('Hardening_Temp_Water_max'),
                   n('Tempering_Temp_min'), n('Tempering_Temp_max'),
+                  n('Temp_Cementace_min'), n('Temp_Cementace_max'),
+                  n('Temp_Nitrocementace_min'), n('Temp_Nitrocementace_max'),
+                  n('Temp_Nitridace_min'), n('Temp_Nitridace_max'),
+                  n('Temp_Karbonitridace_min'), n('Temp_Karbonitridace_max'),
                   n('Hardness_min'), n('Hardness_max'), g('Hardness_Unit') or 'HRC',
-                  g('Note'), pdf, id))
+                  g('Note'), pdf_paths_json, id))
         else:
+            pdf_paths_json = json.dumps(new_paths)
             db.execute('''
                 INSERT INTO Materials (
                     name, norm, type,
@@ -366,9 +420,13 @@ def material_form(id=None):
                     Hardening_Temp_Oil_min, Hardening_Temp_Oil_max,
                     Hardening_Temp_Water_min, Hardening_Temp_Water_max,
                     Tempering_Temp_min, Tempering_Temp_max,
+                    Temp_Cementace_min, Temp_Cementace_max,
+                    Temp_Nitrocementace_min, Temp_Nitrocementace_max,
+                    Temp_Nitridace_min, Temp_Nitridace_max,
+                    Temp_Karbonitridace_min, Temp_Karbonitridace_max,
                     Hardness_min, Hardness_max, Hardness_Unit,
-                    Note, pdf_path
-                ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+                    Note, pdf_paths
+                ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
             ''', (g('name'), g('norm'), g('type'),
                   n('C_min'), n('C_max'), n('Si_min'), n('Si_max'),
                   n('Mn_min'), n('Mn_max'), n('P_min'), n('P_max'),
@@ -378,15 +436,41 @@ def material_form(id=None):
                   n('Hardening_Temp_Oil_min'), n('Hardening_Temp_Oil_max'),
                   n('Hardening_Temp_Water_min'), n('Hardening_Temp_Water_max'),
                   n('Tempering_Temp_min'), n('Tempering_Temp_max'),
+                  n('Temp_Cementace_min'), n('Temp_Cementace_max'),
+                  n('Temp_Nitrocementace_min'), n('Temp_Nitrocementace_max'),
+                  n('Temp_Nitridace_min'), n('Temp_Nitridace_max'),
+                  n('Temp_Karbonitridace_min'), n('Temp_Karbonitridace_max'),
                   n('Hardness_min'), n('Hardness_max'), g('Hardness_Unit') or 'HRC',
-                  g('Note'), pdf))
+                  g('Note'), pdf_paths_json))
         db.commit()
         db.close()
         return redirect(url_for('materials'))
 
     material = db.execute('SELECT * FROM Materials WHERE id=?', (id,)).fetchone() if id else None
+    # Build list of pdf paths for template
+    mat_pdfs = []
+    if material:
+        if material['pdf_paths']:
+            mat_pdfs = json.loads(material['pdf_paths'])
+        elif material['pdf_path']:
+            mat_pdfs = [material['pdf_path']]
     db.close()
-    return render_template('material_form.html', material=material, id=id)
+    return render_template('material_form.html', material=material, mat_pdfs=mat_pdfs, id=id)
+
+
+@app.route('/materials/delete_pdf', methods=['POST'])
+def delete_material_pdf():
+    mat_id = request.form.get('mat_id')
+    path = request.form.get('path')
+    db = get_db()
+    existing = db.execute('SELECT pdf_paths FROM Materials WHERE id=?', (mat_id,)).fetchone()
+    if existing and existing['pdf_paths']:
+        paths = json.loads(existing['pdf_paths'])
+        paths = [p for p in paths if p != path]
+        db.execute('UPDATE Materials SET pdf_paths=? WHERE id=?', (json.dumps(paths), mat_id))
+        db.commit()
+    db.close()
+    return redirect(url_for('material_form', id=mat_id))
 
 
 @app.route('/materials/delete/<int:id>', methods=['POST'])
@@ -417,33 +501,78 @@ def machine_form(id=None):
     db = get_db()
     if request.method == 'POST':
         f = request.form
-        manual = save_file(request.files.get('manual_file'), 'machines')
+
+        # Multiple technologies stored as JSON
+        techs = f.getlist('technology')
+        technology_json = json.dumps(techs) if techs else None
+
+        # Multiple files
+        new_manual_files = request.files.getlist('manual_files')
+        new_paths = save_files(new_manual_files, 'machines')
+
         if id:
-            existing = db.execute('SELECT manual_path FROM Machines WHERE id=?', (id,)).fetchone()
-            if not manual and existing:
-                manual = existing['manual_path']
+            existing = db.execute('SELECT manual_path, manual_paths FROM Machines WHERE id=?', (id,)).fetchone()
+            if existing:
+                existing_paths = json.loads(existing['manual_paths'] or '[]') if existing['manual_paths'] else []
+                if existing['manual_path'] and existing['manual_path'] not in existing_paths:
+                    existing_paths.append(existing['manual_path'])
+            else:
+                existing_paths = []
+            combined = existing_paths + new_paths
+            manual_paths_json = json.dumps(combined)
+
             db.execute('''
                 UPDATE Machines SET
-                    name=?, type=?, Temperature_max=?, technology=?, Max_Load=?, aktivni=?, manual_path=?
+                    name=?, type=?, Temperature_max=?, technology=?, Max_Load=?, aktivni=?, manual_paths=?
                 WHERE id=?
             ''', (f.get('name'), f.get('type') or None,
-                  f.get('Temperature_max') or None, f.get('technology') or None,
+                  f.get('Temperature_max') or None, technology_json,
                   f.get('Max_Load') or None, 1 if f.get('aktivni') else 0,
-                  manual, id))
+                  manual_paths_json, id))
         else:
+            manual_paths_json = json.dumps(new_paths)
             db.execute('''
-                INSERT INTO Machines (name, type, Temperature_max, technology, Max_Load, manual_path)
+                INSERT INTO Machines (name, type, Temperature_max, technology, Max_Load, manual_paths)
                 VALUES (?,?,?,?,?,?)
             ''', (f.get('name'), f.get('type') or None,
-                  f.get('Temperature_max') or None, f.get('technology') or None,
-                  f.get('Max_Load') or None, manual))
+                  f.get('Temperature_max') or None, technology_json,
+                  f.get('Max_Load') or None, manual_paths_json))
         db.commit()
         db.close()
         return redirect(url_for('machines'))
 
     machine = db.execute('SELECT * FROM Machines WHERE id=?', (id,)).fetchone() if id else None
+    # Build lists for template
+    mach_techs = []
+    mach_files = []
+    if machine:
+        if machine['technology']:
+            try:
+                mach_techs = json.loads(machine['technology'])
+            except Exception:
+                mach_techs = [machine['technology']] if machine['technology'] else []
+        if machine['manual_paths']:
+            mach_files = json.loads(machine['manual_paths'])
+        elif machine['manual_path']:
+            mach_files = [machine['manual_path']]
     db.close()
-    return render_template('machine_form.html', machine=machine, id=id)
+    return render_template('machine_form.html', machine=machine, mach_techs=mach_techs,
+                           mach_files=mach_files, id=id)
+
+
+@app.route('/machines/delete_file', methods=['POST'])
+def delete_machine_file():
+    mach_id = request.form.get('mach_id')
+    path = request.form.get('path')
+    db = get_db()
+    existing = db.execute('SELECT manual_paths FROM Machines WHERE id=?', (mach_id,)).fetchone()
+    if existing and existing['manual_paths']:
+        paths = json.loads(existing['manual_paths'])
+        paths = [p for p in paths if p != path]
+        db.execute('UPDATE Machines SET manual_paths=? WHERE id=?', (json.dumps(paths), mach_id))
+        db.commit()
+    db.close()
+    return redirect(url_for('machine_form', id=mach_id))
 
 
 @app.route('/machines/delete/<int:id>', methods=['POST'])
@@ -458,7 +587,7 @@ def delete_machine(id):
 if __name__ == '__main__':
     init_db()
     print()
-    print('  🔥  TZ Databáze spuštěna!')
-    print('  🌐  Otevřete http://localhost:5000')
+    print('  TZ Databaze spustena!')
+    print('  Otevrete http://localhost:5000')
     print()
-    app.run(debug=True, port=5000)
+    app.run(debug=True, host='0.0.0.0', port=5000)
