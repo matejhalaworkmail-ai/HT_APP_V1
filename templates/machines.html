@@ -73,7 +73,10 @@
                 </td>
                 <td>
                     {% if m.manual_path %}
-                        <a class="file-link" href="{{ url_for('uploaded_file', filename=m.manual_path) }}" target="_blank">📄 PDF</a>
+                        <a class="file-link" href="{{ url_for('uploaded_file', filename=m.manual_path) }}" target="_blank">
+                            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14,2 14,8 20,8"/></svg>
+                            PDF
+                        </a>
                     {% else %}—{% endif %}
                 </td>
                 <td>
@@ -91,7 +94,9 @@
     </table>
     {% else %}
     <div class="empty">
-        <div class="empty-icon">🏭</div>
+        <div class="empty-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="4" y="4" width="16" height="16" rx="2"/><rect x="9" y="9" width="6" height="6"/><path d="M9 2v2M15 2v2M9 20v2M15 20v2M2 9h2M2 15h2M20 9h2M20 15h2"/></svg>
+        </div>
         <div class="empty-text">Zatím nejsou přidána žádná zařízení</div>
         <br>
         <a href="{{ url_for('machine_form') }}" class="btn btn-primary">Přidat první zařízení</a>

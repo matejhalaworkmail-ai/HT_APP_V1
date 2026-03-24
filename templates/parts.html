@@ -89,7 +89,9 @@
     </table>
     {% else %}
     <div class="empty">
-        <div class="empty-icon">⚙️</div>
+        <div class="empty-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M12 20a8 8 0 1 0 0-16 8 8 0 0 0 0 16z"/><path d="M12 14a2 2 0 1 0 0-4 2 2 0 0 0 0 4z"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"/></svg>
+        </div>
         <div class="empty-text">
             {% if search %}Žádný díl neodpovídá hledání „{{ search }}"{% else %}Zatím nejsou přidány žádné díly{% endif %}
         </div>
