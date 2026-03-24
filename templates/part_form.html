@@ -292,7 +292,7 @@
                     <input type="file" name="drawing_file" accept=".pdf,.dwg,.dxf,.png,.jpg,.jpeg">
                     {% if part and part.drawing_path %}
                     <div style="margin-top:6px; font-size:12px;">
-                        Aktuální: <a class="file-link" href="{{ url_for('uploaded_file', filename=part.drawing_path) }}" target="_blank">📐 {{ part.drawing_path.split('/')[-1] }}</a>
+                        Aktuální: <a class="file-link" href="{{ url_for('uploaded_file', filename=part.drawing_path) }}" target="_blank">{{ part.drawing_path.split('/')[-1] }}</a>
                     </div>
                     {% endif %}
                 </label>
@@ -301,7 +301,7 @@
                     <input type="file" name="calculation_file" accept=".pdf,.xlsx,.xls,.doc,.docx">
                     {% if part and part.calculation_path %}
                     <div style="margin-top:6px; font-size:12px;">
-                        Aktuální: <a class="file-link" href="{{ url_for('uploaded_file', filename=part.calculation_path) }}" target="_blank">📊 {{ part.calculation_path.split('/')[-1] }}</a>
+                        Aktuální: <a class="file-link" href="{{ url_for('uploaded_file', filename=part.calculation_path) }}" target="_blank">{{ part.calculation_path.split('/')[-1] }}</a>
                     </div>
                     {% endif %}
                 </label>
